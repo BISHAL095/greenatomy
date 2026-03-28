@@ -1,0 +1,23 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model RequestLog {
+  id         String   @id @default(cuid())
+  method     String
+  path       String
+  statusCode Int?
+  durationMs Int
+  cpuUsedMs  Float
+  cpuUtil    Float
+  energyKwh  Float
+  cost       Float
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([method, path])
+}
