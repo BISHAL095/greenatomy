@@ -2,7 +2,16 @@ const process = require("process");
 const energyCalculator = require("../utils/energyCalculator");
 const prisma = require("../lib/prisma");
 
+function shouldSkipLogging(req) {
+  return req.path.startsWith("/logs") || req.path === "/health" || req.method === "OPTIONS";
+}
+
 function loggerMiddleware(req, res, next) {
+  if (shouldSkipLogging(req)) {
+    next();
+    return;
+  }
+
   const startTime = Date.now();
   const startCPU = process.cpuUsage();
 
@@ -23,7 +32,7 @@ function loggerMiddleware(req, res, next) {
       await prisma.requestLog.create({
         data: {
           method: req.method,
-          path: req.url,
+          path: req.path,
           statusCode: res.statusCode,
           durationMs,
           cpuUsedMs,
@@ -32,7 +41,6 @@ function loggerMiddleware(req, res, next) {
           cost,
         },
       });
-      console.log("DB write success");
     } catch (err) {
       console.error("DB write failed:", err.message);
     }
