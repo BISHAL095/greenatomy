@@ -20,9 +20,13 @@ frontend/
 ## Features (Current)
 
 - Filter by HTTP method and request path
+- Filter by time window (`24h`, `7d`, `30d`, `all`, custom)
+- Sort logs by date (newest/oldest)
+- Paginate logs table with page-size control
 - View aggregated stats (requests, latency, energy, cost)
 - View latest request telemetry logs
 - Basic loading/error states
+- Sends auth token in API requests when `VITE_API_TOKEN` is configured
 
 ## Prerequisites
 
@@ -34,6 +38,7 @@ Create `frontend/.env`:
 
 ```env
 VITE_API_BASE=http://localhost:3000
+VITE_API_TOKEN=replace-with-same-backend-auth-token
 ```
 
 ## Install
@@ -55,10 +60,14 @@ npm run build
 npm run preview
 ```
 
+## Test
+
+```bash
+npm test
+```
+
 ## Current Limitations
 
-- No auth-aware UI yet
-- No pagination controls in table
 - No saved filters/dashboard presets
 
 ## Suggested Next UI Improvements

@@ -54,6 +54,7 @@ Create `backend/.env`:
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DB_NAME
 PORT=3000
 CORS_ORIGIN=http://localhost:5173
+AUTH_TOKEN=replace-with-strong-token
 ```
 
 ## Install
@@ -82,16 +83,23 @@ npx prisma migrate deploy
 node index.js
 ```
 
+## Test
+
+```bash
+npm test
+```
+
 ## API
 
 - `GET /health` -> health probe
-- `GET /logs` -> latest request logs (supports time windows)
-- `GET /logs/stats` -> aggregated telemetry (supports time windows)
+- `GET /logs` -> latest request logs (protected, supports time windows)
+- `GET /logs/stats` -> aggregated telemetry (protected, supports time windows)
 
 ### Example
 
 ```bash
-curl "http://localhost:3000/logs?limit=10&method=GET&path=/heavy&range=24h"
+curl -H "Authorization: Bearer $AUTH_TOKEN" \
+  "http://localhost:3000/logs?limit=10&method=GET&path=/heavy&range=24h"
 ```
 
 ### Time Window Query Params
@@ -106,3 +114,4 @@ curl "http://localhost:3000/logs?limit=10&method=GET&path=/heavy&range=24h"
 
 - Middleware skips `/logs`, `/health`, and `OPTIONS` requests
 - Energy and cost are heuristic estimates intended for trend analysis
+- `/logs` routes require either `Authorization: Bearer <token>` or `x-api-key: <token>`

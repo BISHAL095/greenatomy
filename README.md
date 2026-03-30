@@ -35,6 +35,7 @@ Create `.env` in `backend/` with at least:
 ```env
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DB_NAME
 PORT=3000
+AUTH_TOKEN=replace-with-strong-token
 ```
 
 Run migrations and start server:
@@ -55,12 +56,29 @@ Create `.env` in `frontend/`:
 
 ```env
 VITE_API_BASE=http://localhost:3000
+VITE_API_TOKEN=replace-with-same-backend-auth-token
 ```
 
 Run dev server:
 
 ```bash
 npm run dev
+```
+
+## Run Tests
+
+Backend:
+
+```bash
+cd backend
+npm test
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm test
 ```
 
 ## API Endpoints (Current)
@@ -71,7 +89,7 @@ npm run dev
 
 ## Suggested Next Improvements
 
-- Add authentication and tenant isolation
+- Add tenant isolation and role-based authorization
 - Add request validation + sane query limits
 - Add pagination and time-range filters
 - Add tests and CI pipeline

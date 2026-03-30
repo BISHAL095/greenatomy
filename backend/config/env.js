@@ -21,4 +21,5 @@ function parseCorsOrigin(value) {
 module.exports = {
   port: Number.isFinite(port) && port > 0 ? port : 3000,
   corsOrigin: parseCorsOrigin(rawCorsOrigin),
+  authToken: process.env.AUTH_TOKEN || "",
 };

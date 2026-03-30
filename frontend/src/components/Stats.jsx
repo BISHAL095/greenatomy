@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { buildApiUrl } from "../lib/api";
+import { buildApiConfig, buildApiUrl } from "../lib/api";
 
 function Stats({ filters }) {
   const [stats, setStats] = useState({
@@ -40,11 +40,19 @@ function Stats({ filters }) {
           params.set("range", filters.range);
         }
 
-        const res = await axios.get(buildApiUrl(`/logs/stats?${params.toString()}`));
+        const res = await axios.get(
+          buildApiUrl(`/logs/stats?${params.toString()}`),
+          buildApiConfig()
+        );
         setStats(res.data);
       } catch (err) {
         console.log(err);
-        setError("Unable to load dashboard stats.");
+        const status = err?.response?.status;
+        if (status === 401) {
+          setError("Unauthorized. Set VITE_API_TOKEN to access protected routes.");
+        } else {
+          setError("Unable to load dashboard stats.");
+        }
       } finally {
         setLoading(false);
       }

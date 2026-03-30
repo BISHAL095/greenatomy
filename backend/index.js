@@ -2,6 +2,7 @@ const express = require("express");
 const logsRoute = require("./routes/logs");
 const cors = require("cors");
 const loggerMiddleware = require("./middlewares/estimator");
+const authMiddleware = require("./middlewares/auth");
 const env = require("./config/env");
 
 const app = express();
@@ -14,7 +15,7 @@ app.use(
 );
 
 app.use(loggerMiddleware);
-app.use("/logs", logsRoute);
+app.use("/logs", authMiddleware, logsRoute);
 
 app.get("/health", (req, res) => {
   res.json({ ok: true });

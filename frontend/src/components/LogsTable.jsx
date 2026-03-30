@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { buildApiUrl } from "../lib/api";
+import { buildApiConfig, buildApiUrl } from "../lib/api";
 
 function LogsTable({ filters }) {
   const [rawLogs, setRawLogs] = useState([]);
@@ -41,11 +41,16 @@ function LogsTable({ filters }) {
           params.set("range", filters.range);
         }
 
-        const res = await axios.get(buildApiUrl(`/logs?${params.toString()}`));
+        const res = await axios.get(buildApiUrl(`/logs?${params.toString()}`), buildApiConfig());
         setRawLogs(res.data);
       } catch (err) {
         console.log(err);
-        setError("Unable to load request logs.");
+        const status = err?.response?.status;
+        if (status === 401) {
+          setError("Unauthorized. Set VITE_API_TOKEN to access protected routes.");
+        } else {
+          setError("Unable to load request logs.");
+        }
       } finally {
         setLoading(false);
       }
