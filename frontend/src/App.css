@@ -84,7 +84,8 @@
   gap: 0.55rem;
 }
 
-.field input {
+.field input,
+.field select {
   width: 100%;
   box-sizing: border-box;
   border: 1px solid rgba(222, 234, 228, 0.14);
@@ -96,11 +97,20 @@
   transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
 }
 
-.field input:focus {
+.field input:focus,
+.field select:focus {
   outline: none;
   border-color: rgba(242, 176, 81, 0.7);
   background: rgba(245, 247, 246, 0.09);
   transform: translateY(-1px);
+}
+
+.field select option {
+  color: #102119;
+}
+
+.field.compact {
+  min-width: 140px;
 }
 
 .stats-panel,
@@ -166,6 +176,41 @@
   border-radius: 20px;
   border: 1px solid rgba(233, 241, 237, 0.08);
   background: rgba(4, 12, 10, 0.35);
+}
+
+.table-controls,
+.pagination-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.table-summary {
+  margin: 0;
+  color: rgba(228, 237, 232, 0.7);
+  font-size: 0.9rem;
+}
+
+.pager-btn {
+  border: 1px solid rgba(233, 241, 237, 0.14);
+  background: rgba(245, 247, 246, 0.06);
+  color: #edf4f0;
+  border-radius: 12px;
+  padding: 0.55rem 0.9rem;
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+}
+
+.pager-btn:hover:not(:disabled) {
+  border-color: rgba(242, 176, 81, 0.5);
+  background: rgba(242, 176, 81, 0.12);
+}
+
+.pager-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .table-shell table {
@@ -294,5 +339,11 @@
   .table-shell th,
   .table-shell td {
     padding: 0.85rem 0.75rem;
+  }
+
+  .table-controls,
+  .pagination-row {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

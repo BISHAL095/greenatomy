@@ -85,14 +85,22 @@ node index.js
 ## API
 
 - `GET /health` -> health probe
-- `GET /logs` -> latest request logs
-- `GET /logs/stats` -> aggregated telemetry
+- `GET /logs` -> latest request logs (supports time windows)
+- `GET /logs/stats` -> aggregated telemetry (supports time windows)
 
 ### Example
 
 ```bash
-curl "http://localhost:3000/logs?limit=10&method=GET&path=/heavy"
+curl "http://localhost:3000/logs?limit=10&method=GET&path=/heavy&range=24h"
 ```
+
+### Time Window Query Params
+
+- `range`: `24h` (default), `7d`, `30d`, `all`
+- `from`: custom start datetime (ISO string)
+- `to`: custom end datetime (ISO string)
+
+`from`/`to` take precedence over `range`.
 
 ## Notes
 

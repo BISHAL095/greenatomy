@@ -1,6 +1,6 @@
 const prisma = require("../lib/prisma");
 
-function buildWhereClause({ method, path }) {
+function buildWhereClause({ method, path, createdAt }) {
   const where = {};
 
   if (method) {
@@ -9,6 +9,10 @@ function buildWhereClause({ method, path }) {
 
   if (path) {
     where.path = { contains: path };
+  }
+
+  if (createdAt) {
+    where.createdAt = createdAt;
   }
 
   return where;
@@ -39,6 +43,7 @@ async function fetchStats(filters) {
     avgDurationMs: stats._avg.durationMs || 0,
     totalEnergyKwh: stats._sum.energyKwh || 0,
     totalCost: stats._sum.cost || 0,
+    range: filters.range,
   };
 }
 

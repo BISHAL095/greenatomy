@@ -4,12 +4,27 @@ import LogsTable from "./components/LogsTable";
 import "./App.css";
 
 function App() {
-  const [filters, setFilters] = useState({ method: "", path: "" });
+  const [filters, setFilters] = useState({
+    method: "",
+    path: "",
+    range: "24h",
+    from: "",
+    to: "",
+    sort: "desc",
+  });
 
   function updateFilter(key, value) {
     setFilters((current) => ({
       ...current,
       [key]: value,
+    }));
+  }
+
+  function handleRangeChange(value) {
+    setFilters((current) => ({
+      ...current,
+      range: value,
+      ...(value === "custom" ? {} : { from: "", to: "" }),
     }));
   }
 
@@ -44,6 +59,46 @@ function App() {
                 placeholder="/heavy"
                 onChange={(e) => updateFilter("path", e.target.value)}
               />
+            </label>
+
+            <label className="field">
+              <span>Time range</span>
+              <select value={filters.range} onChange={(e) => handleRangeChange(e.target.value)}>
+                <option value="24h">Last 24h</option>
+                <option value="7d">Last 7 days</option>
+                <option value="30d">Last 30 days</option>
+                <option value="all">All time</option>
+                <option value="custom">Custom</option>
+              </select>
+            </label>
+
+            {filters.range === "custom" ? (
+              <>
+                <label className="field">
+                  <span>From</span>
+                  <input
+                    type="datetime-local"
+                    value={filters.from}
+                    onChange={(e) => updateFilter("from", e.target.value)}
+                  />
+                </label>
+                <label className="field">
+                  <span>To</span>
+                  <input
+                    type="datetime-local"
+                    value={filters.to}
+                    onChange={(e) => updateFilter("to", e.target.value)}
+                  />
+                </label>
+              </>
+            ) : null}
+
+            <label className="field">
+              <span>Date sort</span>
+              <select value={filters.sort} onChange={(e) => updateFilter("sort", e.target.value)}>
+                <option value="desc">Newest first</option>
+                <option value="asc">Oldest first</option>
+              </select>
             </label>
           </div>
           <p className="hero-card-caption">

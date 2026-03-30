@@ -28,6 +28,18 @@ function Stats({ filters }) {
           params.set("path", filters.path);
         }
 
+        if (filters.range === "custom") {
+          if (filters.from) {
+            params.set("from", new Date(filters.from).toISOString());
+          }
+
+          if (filters.to) {
+            params.set("to", new Date(filters.to).toISOString());
+          }
+        } else if (filters.range) {
+          params.set("range", filters.range);
+        }
+
         const res = await axios.get(buildApiUrl(`/logs/stats?${params.toString()}`));
         setStats(res.data);
       } catch (err) {

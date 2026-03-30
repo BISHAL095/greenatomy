@@ -1,11 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { buildApiUrl } from "../lib/api";
 
 function LogsTable({ filters }) {
-  const [logs, setLogs] = useState([]);
+  const [rawLogs, setRawLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filters.method, filters.path, filters.range, filters.from, filters.to, filters.sort, pageSize]);
 
   useEffect(() => {
     const fetchLogs = async () => {
@@ -13,7 +19,7 @@ function LogsTable({ filters }) {
       setError("");
 
       try {
-        const params = new URLSearchParams({ limit: "10" });
+        const params = new URLSearchParams({ limit: "200" });
 
         if (filters.method) {
           params.set("method", filters.method);
@@ -23,8 +29,20 @@ function LogsTable({ filters }) {
           params.set("path", filters.path);
         }
 
+        if (filters.range === "custom") {
+          if (filters.from) {
+            params.set("from", new Date(filters.from).toISOString());
+          }
+
+          if (filters.to) {
+            params.set("to", new Date(filters.to).toISOString());
+          }
+        } else if (filters.range) {
+          params.set("range", filters.range);
+        }
+
         const res = await axios.get(buildApiUrl(`/logs?${params.toString()}`));
-        setLogs(res.data);
+        setRawLogs(res.data);
       } catch (err) {
         console.log(err);
         setError("Unable to load request logs.");
@@ -34,7 +52,23 @@ function LogsTable({ filters }) {
     };
 
     fetchLogs();
-  }, [filters]);
+  }, [filters.method, filters.path, filters.range, filters.from, filters.to]);
+
+  const sortedLogs = useMemo(() => {
+    const copy = [...rawLogs];
+    copy.sort((a, b) => {
+      const aTime = new Date(a.createdAt).getTime();
+      const bTime = new Date(b.createdAt).getTime();
+      return filters.sort === "asc" ? aTime - bTime : bTime - aTime;
+    });
+    return copy;
+  }, [rawLogs, filters.sort]);
+
+  const totalItems = sortedLogs.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const startIndex = (currentPage - 1) * pageSize;
+  const pageLogs = sortedLogs.slice(startIndex, startIndex + pageSize);
 
   return (
     <section className="table-panel">
@@ -49,6 +83,20 @@ function LogsTable({ filters }) {
       </div>
 
       {error ? <p className="status-banner error">{error}</p> : null}
+
+      <div className="table-controls">
+        <p className="table-summary">
+          {loading ? "Loading..." : `Showing ${pageLogs.length} of ${totalItems} logs`}
+        </p>
+        <label className="field compact">
+          <span>Rows per page</span>
+          <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+          </select>
+        </label>
+      </div>
 
       <div className="table-shell">
         <table>
@@ -73,7 +121,7 @@ function LogsTable({ filters }) {
               </tr>
             ) : null}
 
-            {!loading && logs.length === 0 ? (
+            {!loading && pageLogs.length === 0 ? (
               <tr>
                 <td colSpan="8" className="empty-state">
                   No request logs match the current filters.
@@ -82,7 +130,7 @@ function LogsTable({ filters }) {
             ) : null}
 
             {!loading
-              ? logs.map((log) => (
+              ? pageLogs.map((log) => (
                   <tr key={log.id}>
                     <td>
                       <span className={`method-pill method-${log.method?.toLowerCase()}`}>
@@ -95,12 +143,34 @@ function LogsTable({ filters }) {
                     <td>{Number(log.cpuUsedMs).toFixed(2)} ms</td>
                     <td>{Number(log.energyKwh).toFixed(6)} kWh</td>
                     <td>₹{Number(log.cost).toFixed(6)}</td>
-                    <td>{new Date(log.createdAt).toLocaleTimeString()}</td>
+                    <td>{new Date(log.createdAt).toLocaleString()}</td>
                   </tr>
                 ))
               : null}
           </tbody>
         </table>
+      </div>
+
+      <div className="pagination-row">
+        <button
+          type="button"
+          className="pager-btn"
+          onClick={() => setPage((current) => Math.max(1, current - 1))}
+          disabled={loading || currentPage <= 1}
+        >
+          Prev
+        </button>
+        <p className="table-summary">
+          Page {currentPage} of {totalPages}
+        </p>
+        <button
+          type="button"
+          className="pager-btn"
+          onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+          disabled={loading || currentPage >= totalPages}
+        >
+          Next
+        </button>
       </div>
     </section>
   );
