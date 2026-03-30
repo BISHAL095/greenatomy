@@ -1,18 +1,69 @@
-# React + Vite
+# Greenatomy Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + Vite dashboard for viewing request telemetry captured by the backend service.
 
-Currently, two official plugins are available:
+## Folder Layout
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```txt
+frontend/
+  src/
+    App.jsx                # page composition and filters state
+    components/
+      Stats.jsx            # aggregated metrics cards
+      LogsTable.jsx        # recent request log table
+    lib/
+      api.js               # API base URL helper
+  public/
+  index.html
+```
 
-## React Compiler
+## Features (Current)
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+- Filter by HTTP method and request path
+- View aggregated stats (requests, latency, energy, cost)
+- View latest request telemetry logs
+- Basic loading/error states
 
-Note: This will impact Vite dev & build performances.
+## Prerequisites
 
-## Expanding the ESLint configuration
+- Node.js 20+
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Environment Variables
+
+Create `frontend/.env`:
+
+```env
+VITE_API_BASE=http://localhost:3000
+```
+
+## Install
+
+```bash
+npm install
+```
+
+## Run in Dev
+
+```bash
+npm run dev
+```
+
+## Build
+
+```bash
+npm run build
+npm run preview
+```
+
+## Current Limitations
+
+- No auth-aware UI yet
+- No pagination controls in table
+- No saved filters/dashboard presets
+
+## Suggested Next UI Improvements
+
+- Add date/time range filters
+- Add auto-refresh toggle + polling interval control
+- Add pagination and sorting
+- Add empty/error recovery actions

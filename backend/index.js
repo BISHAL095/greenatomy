@@ -2,13 +2,13 @@ const express = require("express");
 const logsRoute = require("./routes/logs");
 const cors = require("cors");
 const loggerMiddleware = require("./middlewares/estimator");
+const env = require("./config/env");
 
 const app = express();
-const port = Number(process.env.PORT) || 3000;
 
 app.use(
   cors({
-    origin: true,
+    origin: env.corsOrigin,
     credentials: true,
   })
 );
@@ -35,8 +35,8 @@ app.get("/heavy", async (req, res) => {
 });
 
 if (require.main === module) {
-  app.listen(port, () => {
-    console.log(`Example app listening on port ${port}`);
+  app.listen(env.port, () => {
+    console.log(`Example app listening on port ${env.port}`);
   });
 }
 

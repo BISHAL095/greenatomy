@@ -31,6 +31,7 @@ function Stats({ filters }) {
         const res = await axios.get(buildApiUrl(`/logs/stats?${params.toString()}`));
         setStats(res.data);
       } catch (err) {
+        console.log(err);
         setError("Unable to load dashboard stats.");
       } finally {
         setLoading(false);

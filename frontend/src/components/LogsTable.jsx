@@ -26,6 +26,7 @@ function LogsTable({ filters }) {
         const res = await axios.get(buildApiUrl(`/logs?${params.toString()}`));
         setLogs(res.data);
       } catch (err) {
+        console.log(err);
         setError("Unable to load request logs.");
       } finally {
         setLoading(false);
