@@ -7,26 +7,29 @@ React + Vite dashboard for viewing request telemetry captured by the backend ser
 ```txt
 frontend/
   src/
-    App.jsx                # page composition and filters state
+    App.jsx                # sticky navbar + page-level navigation
     components/
-      Stats.jsx            # aggregated metrics cards
-      LogsTable.jsx        # recent request log table
+      Stats.jsx            # overview KPI + insights
+      LogsTable.jsx        # logs explorer table
+      ChartsPanel.jsx      # trend/distribution charts
     lib/
-      api.js               # API base URL helper
+      api.js               # API base URL + auth headers
   public/
   index.html
 ```
 
 ## Features (Current)
 
-- Filter by HTTP method and request path
-- Filter by time window (`24h`, `7d`, `30d`, `all`, custom)
-- Sort logs by date (newest/oldest)
-- Paginate logs table with page-size control
-- View aggregated stats (requests, latency, energy, cost)
-- View latest request telemetry logs
-- Basic loading/error states
-- Sends auth token in API requests when `VITE_API_TOKEN` is configured
+- Sticky top navbar with page-level sections: `Overview`, `Logs`, `Charts`
+- Overview page with KPI cards and insight blocks (error rate, top costly/slow routes, key insights)
+- Logs page with inline filter toolbar, date sorting, pagination, status color coding, and slow-request highlighting
+- Charts page with multiple chart types via `recharts`:
+  - requests over time (line)
+  - energy/cost trend (area)
+  - status distribution (pie)
+  - latency distribution (bar)
+- Auth-aware API requests using `VITE_API_TOKEN`
+- Loading/error states for all major data surfaces
 
 ## Prerequisites
 
@@ -72,7 +75,6 @@ npm test
 
 ## Suggested Next UI Improvements
 
-- Add date/time range filters
 - Add auto-refresh toggle + polling interval control
-- Add pagination and sorting
-- Add empty/error recovery actions
+- Add shareable URLs per page/filter state
+- Add drill-down from charts to filtered logs

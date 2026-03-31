@@ -18,8 +18,8 @@ greenatomy/
 
 This repository is in MVP stage:
 - End-to-end flow works (request -> telemetry capture -> DB -> dashboard)
-- Good baseline separation for current scope
-- Not yet production ready (auth, tenant isolation, validation, rate limit, tests, CI)
+- Auth-protected telemetry APIs and test suites are in place
+- Not yet fully production ready (multi-tenant isolation, stronger validation, rate limiting, CI/CD)
 
 ## Quick Start
 
@@ -84,13 +84,13 @@ npm test
 ## API Endpoints (Current)
 
 - `GET /health`
-- `GET /logs?limit=10&method=GET&path=/heavy`
-- `GET /logs/stats?method=GET&path=/heavy`
+- `GET /logs?limit=10&method=GET&path=/heavy&range=24h`
+- `GET /logs/stats?method=GET&path=/heavy&range=24h`
 
 ## Suggested Next Improvements
 
 - Add tenant isolation and role-based authorization
 - Add request validation + sane query limits
-- Add pagination and time-range filters
-- Add tests and CI pipeline
+- Move frontend pagination/sorting fully server-side for large datasets
+- Add CI pipeline for lint/test/build gates
 - Add logging/metrics/tracing for operational visibility

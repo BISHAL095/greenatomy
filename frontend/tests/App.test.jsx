@@ -49,6 +49,7 @@ beforeEach(() => {
 describe("Dashboard UI", () => {
   test("shows custom date inputs when custom range is selected", async () => {
     render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Logs" }));
 
     const rangeSelect = screen.getByLabelText("Time range");
     fireEvent.change(rangeSelect, { target: { value: "custom" } });
@@ -59,6 +60,7 @@ describe("Dashboard UI", () => {
 
   test("applies date sort and supports pagination navigation", async () => {
     render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Logs" }));
 
     expect(await screen.findByText("Showing 10 of 12 logs")).toBeInTheDocument();
     expect(screen.getAllByText("Page 1 of 2").length).toBeGreaterThan(0);

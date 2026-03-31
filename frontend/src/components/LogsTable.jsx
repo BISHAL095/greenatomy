@@ -2,6 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { buildApiConfig, buildApiUrl } from "../lib/api";
 
+const SLOW_REQUEST_THRESHOLD_MS = 1000;
+
+function getStatusTone(statusCode) {
+  const status = Number(statusCode);
+  if (!Number.isFinite(status)) return "unknown";
+  if (status >= 500) return "error";
+  if (status >= 400) return "warning";
+  if (status >= 200 && status < 400) return "success";
+  return "unknown";
+}
+
 function LogsTable({ filters }) {
   const [rawLogs, setRawLogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -136,15 +147,27 @@ function LogsTable({ filters }) {
 
             {!loading
               ? pageLogs.map((log) => (
-                  <tr key={log.id}>
+                  <tr
+                    key={log.id}
+                    className={Number(log.durationMs) > SLOW_REQUEST_THRESHOLD_MS ? "row-slow" : ""}
+                  >
                     <td>
                       <span className={`method-pill method-${log.method?.toLowerCase()}`}>
                         {log.method}
                       </span>
                     </td>
                     <td className="path-cell">{log.path}</td>
-                    <td>{log.statusCode ?? "--"}</td>
-                    <td>{log.durationMs} ms</td>
+                    <td>
+                      <span className={`status-pill status-${getStatusTone(log.statusCode)}`}>
+                        {log.statusCode ?? "--"}
+                      </span>
+                    </td>
+                    <td>
+                      {log.durationMs} ms
+                      {Number(log.durationMs) > SLOW_REQUEST_THRESHOLD_MS ? (
+                        <span className="slow-badge">Slow</span>
+                      ) : null}
+                    </td>
                     <td>{Number(log.cpuUsedMs).toFixed(2)} ms</td>
                     <td>{Number(log.energyKwh).toFixed(6)} kWh</td>
                     <td>₹{Number(log.cost).toFixed(6)}</td>

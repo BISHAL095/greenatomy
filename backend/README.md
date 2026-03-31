@@ -95,6 +95,13 @@ npm test
 - `GET /logs` -> latest request logs (protected, supports time windows)
 - `GET /logs/stats` -> aggregated telemetry (protected, supports time windows)
 
+## Automated Test Coverage
+
+- Auth middleware behavior (`401`/authorized flows)
+- Logs controller behavior (validator/service integration with mocks)
+- Logs route wiring
+- Query validator edge cases (range/method/date validation)
+
 ### Example
 
 ```bash
