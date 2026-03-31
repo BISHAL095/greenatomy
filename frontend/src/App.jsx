@@ -3,10 +3,13 @@ import Stats from "./components/Stats";
 import LogsTable from "./components/LogsTable";
 import "./App.css";
 
+// Load chart bundle only when charts page is visited.
 const ChartsPanel = lazy(() => import("./components/ChartsPanel"));
 
 function App() {
+  // Page-level navigation state for top navbar.
   const [currentPage, setCurrentPage] = useState("overview");
+  // Logs page filter state.
   const [filters, setFilters] = useState({
     method: "",
     path: "",

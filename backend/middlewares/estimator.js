@@ -2,6 +2,7 @@ const process = require("process");
 const energyCalculator = require("../utils/energyCalculator");
 const prisma = require("../lib/prisma");
 
+// Skip internal endpoints to avoid polluting telemetry with dashboard traffic.
 function shouldSkipLogging(req) {
   return req.path.startsWith("/logs") || req.path === "/health" || req.method === "OPTIONS";
 }
@@ -15,6 +16,7 @@ function loggerMiddleware(req, res, next) {
   const startTime = Date.now();
   const startCPU = process.cpuUsage();
 
+  // Measure request after response is sent so status code and total duration are final.
   res.on("finish", async () => {
     const durationMs = Date.now() - startTime;
 

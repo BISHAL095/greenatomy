@@ -8,6 +8,7 @@ const RANGE_TO_MS = {
   "30d": 30 * 24 * 60 * 60 * 1000,
 };
 
+// Resolve current analysis window from preset range or custom dates.
 function getWindowRange(filters) {
   if (filters.range === "all") {
     return { from: null, to: null, windowMs: null };
@@ -28,6 +29,7 @@ function getWindowRange(filters) {
   return { from, to, windowMs };
 }
 
+// Compute high-signal metrics from raw logs for insight blocks.
 function calculateMetrics(logs) {
   const totalRequests = logs.length;
   const totalDuration = logs.reduce((sum, log) => sum + Number(log.durationMs || 0), 0);
@@ -115,6 +117,7 @@ function Stats({ filters }) {
         const errorRate = logs.length ? (errors / logs.length) * 100 : 0;
         const lastSeenAt = logs[0]?.createdAt || "";
 
+        // Aggregate per-route cost and latency to surface top hotspots.
         const routeMap = new Map();
         const slowRouteMap = new Map();
         for (const log of logs) {
@@ -180,6 +183,7 @@ function Stats({ filters }) {
           };
         }
 
+        // Generate lightweight rule-based insights for the overview narrative.
         const messages = [];
         if (errorRate > 5) {
           messages.push(`High error rate detected (${errorRate.toFixed(2)}%).`);

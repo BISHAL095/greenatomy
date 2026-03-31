@@ -1,5 +1,6 @@
 const env = require("../config/env");
 
+// Extract Bearer token from Authorization header.
 function getBearerToken(header) {
   if (!header) return "";
 
@@ -16,6 +17,7 @@ function authMiddleware(req, res, next) {
     return;
   }
 
+  // Support both standard bearer auth and API-key style auth for simple clients.
   const bearerToken = getBearerToken(req.headers.authorization);
   const apiKeyToken = typeof req.headers["x-api-key"] === "string" ? req.headers["x-api-key"].trim() : "";
   const token = bearerToken || apiKeyToken;

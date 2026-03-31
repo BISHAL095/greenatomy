@@ -4,6 +4,7 @@ const port = Number(process.env.PORT);
 const rawCorsOrigin = process.env.CORS_ORIGIN;
 
 function parseCorsOrigin(value) {
+  // true allows any origin in development; string/array is used in stricter deployments.
   if (!value || value === "*") {
     return true;
   }

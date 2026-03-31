@@ -5,6 +5,7 @@ const RANGE_TO_MS = {
   "30d": 30 * 24 * 60 * 60 * 1000,
 };
 
+// Validate and normalize method filter into canonical uppercase form.
 function normalizeMethod(method) {
   if (!method) return undefined;
 
@@ -43,6 +44,7 @@ function normalizeLimit(limit) {
   return Math.min(parsed, 200);
 }
 
+// Parse date-like input into a valid Date object or throw a 400 error.
 function parseDate(value, fieldName) {
   if (!value) return undefined;
 
@@ -68,6 +70,7 @@ function normalizeRange(range) {
   throw err;
 }
 
+// Resolve either custom from/to window or preset range window.
 function normalizeTimeWindow(query) {
   const from = parseDate(query.from, "from");
   const to = parseDate(query.to, "to");

@@ -5,6 +5,7 @@ const loggerMiddleware = require("./middlewares/estimator");
 const authMiddleware = require("./middlewares/auth");
 const env = require("./config/env");
 
+// Express app bootstrap for telemetry APIs and demo routes.
 const app = express();
 
 app.use(
@@ -15,6 +16,7 @@ app.use(
 );
 
 app.use(loggerMiddleware);
+// Protect telemetry endpoints with token auth.
 app.use("/logs", authMiddleware, logsRoute);
 
 app.get("/health", (req, res) => {

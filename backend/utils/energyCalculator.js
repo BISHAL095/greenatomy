@@ -1,5 +1,6 @@
 const os = require("os");
 
+// Heuristic energy model based on request duration and process CPU time.
 function energyCalculator(durationMs, cpuUsedMs) {
   const cores = os.cpus().length;
 

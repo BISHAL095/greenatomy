@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { buildApiConfig, buildApiUrl } from "../lib/api";
 
+// Requests above this threshold are tagged as slow in the table.
 const SLOW_REQUEST_THRESHOLD_MS = 1000;
 
 function getStatusTone(statusCode) {
@@ -21,6 +22,7 @@ function LogsTable({ filters }) {
   const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
+    // Reset pagination whenever filters/sort/page size change.
     setPage(1);
   }, [filters.method, filters.path, filters.range, filters.from, filters.to, filters.sort, pageSize]);
 
@@ -71,6 +73,7 @@ function LogsTable({ filters }) {
   }, [filters.method, filters.path, filters.range, filters.from, filters.to]);
 
   const sortedLogs = useMemo(() => {
+    // Client-side sort to support quick newest/oldest toggles.
     const copy = [...rawLogs];
     copy.sort((a, b) => {
       const aTime = new Date(a.createdAt).getTime();

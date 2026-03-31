@@ -3,6 +3,7 @@ require("../config/env");
 const { PrismaPg } = require("@prisma/adapter-pg");
 const { PrismaClient } = require("@prisma/client");
 
+// Fail fast if DB connection config is missing.
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL is not set");
 }

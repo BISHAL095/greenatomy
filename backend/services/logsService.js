@@ -1,5 +1,6 @@
 const prisma = require("../lib/prisma");
 
+// Build Prisma filter object from validated query params.
 function buildWhereClause({ method, path, createdAt }) {
   const where = {};
 
@@ -21,6 +22,7 @@ function buildWhereClause({ method, path, createdAt }) {
 async function fetchLogs(filters) {
   const where = buildWhereClause(filters);
 
+  // Query newest-first; UI handles optional re-sorting for display.
   return prisma.requestLog.findMany({
     where,
     orderBy: { createdAt: "desc" },

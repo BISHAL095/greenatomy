@@ -31,6 +31,7 @@ const STATUS_COLORS = {
   "5xx": "#ff9f9f",
 };
 
+// Normalize timestamps into chart buckets based on selected range.
 function getBucketStart(date, range) {
   const d = new Date(date);
 
@@ -43,6 +44,7 @@ function getBucketStart(date, range) {
   return d;
 }
 
+// Build human-friendly x-axis labels per bucket.
 function formatBucketLabel(bucketDate, range) {
   const date = new Date(bucketDate);
 
@@ -53,6 +55,7 @@ function formatBucketLabel(bucketDate, range) {
   return date.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
+// Bucket latency into discrete ranges for distribution chart.
 function getLatencyBucket(durationMs) {
   const d = Number(durationMs || 0);
   if (d < 200) return "<200ms";
@@ -62,6 +65,7 @@ function getLatencyBucket(durationMs) {
   return ">2s";
 }
 
+// Build time-series points for requests/energy/cost trends.
 function buildTimeSeries(logs, range) {
   const bucketMap = new Map();
 
@@ -92,6 +96,7 @@ function buildTimeSeries(logs, range) {
     }));
 }
 
+// Build status-class breakdown for pie chart.
 function buildStatusSeries(logs) {
   let ok = 0;
   let warn = 0;
@@ -111,6 +116,7 @@ function buildStatusSeries(logs) {
   ];
 }
 
+// Build latency distribution for bar chart.
 function buildLatencySeries(logs) {
   const buckets = {
     "<200ms": 0,
@@ -169,6 +175,7 @@ function ChartsPanel() {
   }, [range]);
 
   const totals = useMemo(() => {
+    // Window totals for quick executive summary above charts.
     return series.reduce(
       (acc, point) => {
         acc.requests += point.requests;
