@@ -55,6 +55,8 @@ DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DB_NAME
 PORT=3000
 CORS_ORIGIN=http://localhost:5173
 AUTH_TOKEN=replace-with-strong-token
+LOGS_RATE_LIMIT_WINDOW_MS=60000
+LOGS_RATE_LIMIT_MAX_REQUESTS=60
 ```
 
 ## Install
@@ -116,6 +118,15 @@ curl -H "Authorization: Bearer $AUTH_TOKEN" \
 - `to`: custom end datetime (ISO string)
 
 `from`/`to` take precedence over `range`.
+
+### Rate Limiting
+
+`/logs` and `/logs/stats` are protected by a simple per-IP fixed-window limiter.
+
+- Default window: `60000` ms
+- Default max requests per window: `60`
+- Configure with `LOGS_RATE_LIMIT_WINDOW_MS` and `LOGS_RATE_LIMIT_MAX_REQUESTS`
+- Exceeded requests return `429 Too Many Requests` with a `Retry-After` header
 
 ## Notes
 

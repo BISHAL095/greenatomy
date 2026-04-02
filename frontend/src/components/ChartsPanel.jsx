@@ -134,8 +134,7 @@ function buildLatencySeries(logs) {
   return Object.entries(buckets).map(([bucket, count]) => ({ bucket, count }));
 }
 
-function ChartsPanel() {
-  const [range, setRange] = useState("7d");
+function ChartsPanel({ range, onRangeChange }) {
   const [series, setSeries] = useState([]);
   const [statusSeries, setStatusSeries] = useState([]);
   const [latencySeries, setLatencySeries] = useState([]);
@@ -196,7 +195,7 @@ function ChartsPanel() {
         </div>
         <label className="field compact">
           <span>Window</span>
-          <select value={range} onChange={(e) => setRange(e.target.value)}>
+          <select value={range} onChange={(e) => onRangeChange(e.target.value)}>
             {RANGE_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}

@@ -25,6 +25,7 @@ function buildLogs(count = 12) {
 }
 
 beforeEach(() => {
+  window.history.replaceState(null, "", "/");
   axios.get.mockImplementation((url) => {
     if (url.includes("/logs/stats")) {
       return Promise.resolve({
@@ -76,5 +77,60 @@ describe("Dashboard UI", () => {
 
     const rows = screen.getAllByRole("row");
     expect(within(rows[1]).getByText("/endpoint-0")).toBeInTheDocument();
+  });
+
+  test("syncs page, filters, and chart window to the URL", async () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Logs" }));
+    fireEvent.change(screen.getByLabelText("HTTP method"), {
+      target: { value: "get" },
+    });
+    fireEvent.change(screen.getByLabelText("Request path"), {
+      target: { value: "/heavy" },
+    });
+    fireEvent.change(screen.getByLabelText("Time range"), {
+      target: { value: "7d" },
+    });
+    fireEvent.change(screen.getByLabelText("Date sort"), {
+      target: { value: "asc" },
+    });
+
+    expect(window.location.search).toContain("page=logs");
+    expect(window.location.search).toContain("method=GET");
+    expect(window.location.search).toContain("path=%2Fheavy");
+    expect(window.location.search).toContain("range=7d");
+    expect(window.location.search).toContain("sort=asc");
+
+    fireEvent.click(screen.getByRole("button", { name: "Charts" }));
+    expect(await screen.findByLabelText("Window")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Window"), {
+      target: { value: "30d" },
+    });
+
+    expect(window.location.search).toContain("page=charts");
+    expect(window.location.search).toContain("chartRange=30d");
+  });
+
+  test("hydrates dashboard state from the URL", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/?page=logs&method=post&path=%2Fjobs&range=custom&from=2026-03-01T08%3A00&to=2026-03-01T09%3A00&sort=asc&chartRange=24h"
+    );
+
+    render(<App />);
+
+    expect(screen.getByRole("button", { name: "Logs" })).toHaveClass("active");
+    expect(screen.getByLabelText("HTTP method")).toHaveValue("POST");
+    expect(screen.getByLabelText("Request path")).toHaveValue("/jobs");
+    expect(screen.getByLabelText("Time range")).toHaveValue("custom");
+    expect(await screen.findByLabelText("From")).toHaveValue("2026-03-01T08:00");
+    expect(screen.getByLabelText("To")).toHaveValue("2026-03-01T09:00");
+    expect(screen.getByLabelText("Date sort")).toHaveValue("asc");
+
+    fireEvent.click(screen.getByRole("button", { name: "Charts" }));
+    expect(await screen.findByLabelText("Window")).toHaveValue("24h");
   });
 });

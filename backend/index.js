@@ -3,6 +3,7 @@ const logsRoute = require("./routes/logs");
 const cors = require("cors");
 const loggerMiddleware = require("./middlewares/estimator");
 const authMiddleware = require("./middlewares/auth");
+const { createRateLimitMiddleware } = require("./middlewares/rateLimit");
 const env = require("./config/env");
 
 // Express app bootstrap for telemetry APIs and demo routes.
@@ -17,7 +18,15 @@ app.use(
 
 app.use(loggerMiddleware);
 // Protect telemetry endpoints with token auth.
-app.use("/logs", authMiddleware, logsRoute);
+app.use(
+  "/logs",
+  createRateLimitMiddleware({
+    windowMs: env.logsRateLimitWindowMs,
+    maxRequests: env.logsRateLimitMaxRequests,
+  }),
+  authMiddleware,
+  logsRoute
+);
 
 app.get("/health", (req, res) => {
   res.json({ ok: true });

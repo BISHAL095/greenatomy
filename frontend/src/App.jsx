@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import Stats from "./components/Stats";
 import LogsTable from "./components/LogsTable";
 import "./App.css";
@@ -6,31 +6,117 @@ import "./App.css";
 // Load chart bundle only when charts page is visited.
 const ChartsPanel = lazy(() => import("./components/ChartsPanel"));
 
+const VALID_PAGES = new Set(["overview", "logs", "charts"]);
+const VALID_RANGES = new Set(["24h", "7d", "30d", "all", "custom"]);
+const VALID_SORTS = new Set(["asc", "desc"]);
+const VALID_CHART_RANGES = new Set(["24h", "7d", "30d"]);
+
+function readDashboardState() {
+  const params = new URLSearchParams(window.location.search);
+  const page = params.get("page");
+  const range = params.get("range");
+  const sort = params.get("sort");
+  const chartRange = params.get("chartRange");
+
+  return {
+    currentPage: VALID_PAGES.has(page) ? page : "overview",
+    filters: {
+      method: (params.get("method") ?? "").toUpperCase(),
+      path: params.get("path") ?? "",
+      range: VALID_RANGES.has(range) ? range : "24h",
+      from: params.get("from") ?? "",
+      to: params.get("to") ?? "",
+      sort: VALID_SORTS.has(sort) ? sort : "desc",
+    },
+    chartRange: VALID_CHART_RANGES.has(chartRange) ? chartRange : "7d",
+  };
+}
+
+function buildDashboardSearch({ currentPage, filters, chartRange }) {
+  const params = new URLSearchParams();
+
+  params.set("page", currentPage);
+  params.set("range", filters.range);
+  params.set("sort", filters.sort);
+  params.set("chartRange", chartRange);
+
+  if (filters.method) {
+    params.set("method", filters.method);
+  }
+
+  if (filters.path) {
+    params.set("path", filters.path);
+  }
+
+  if (filters.range === "custom") {
+    if (filters.from) {
+      params.set("from", filters.from);
+    }
+
+    if (filters.to) {
+      params.set("to", filters.to);
+    }
+  }
+
+  return params.toString();
+}
+
 function App() {
-  // Page-level navigation state for top navbar.
-  const [currentPage, setCurrentPage] = useState("overview");
-  // Logs page filter state.
-  const [filters, setFilters] = useState({
-    method: "",
-    path: "",
-    range: "24h",
-    from: "",
-    to: "",
-    sort: "desc",
-  });
+  const [dashboardState, setDashboardState] = useState(readDashboardState);
+  const { currentPage, filters, chartRange } = dashboardState;
+
+  useEffect(() => {
+    const syncFromUrl = () => {
+      setDashboardState(readDashboardState());
+    };
+
+    window.addEventListener("popstate", syncFromUrl);
+    return () => {
+      window.removeEventListener("popstate", syncFromUrl);
+    };
+  }, []);
+
+  useEffect(() => {
+    const search = buildDashboardSearch(dashboardState);
+    const nextUrl = `${window.location.pathname}?${search}${window.location.hash}`;
+
+    if (`${window.location.pathname}${window.location.search}${window.location.hash}` !== nextUrl) {
+      window.history.replaceState(null, "", nextUrl);
+    }
+  }, [dashboardState]);
+
+  function setCurrentPage(page) {
+    setDashboardState((current) => ({
+      ...current,
+      currentPage: page,
+    }));
+  }
 
   function updateFilter(key, value) {
-    setFilters((current) => ({
+    setDashboardState((current) => ({
       ...current,
-      [key]: value,
+      filters: {
+        ...current.filters,
+        [key]: value,
+      },
     }));
   }
 
   function handleRangeChange(value) {
-    setFilters((current) => ({
+    setDashboardState((current) => ({
       ...current,
-      range: value,
-      ...(value === "custom" ? {} : { from: "", to: "" }),
+      filters: {
+        ...current.filters,
+        range: value,
+        ...(value === "custom" ? {} : { from: "", to: "" }),
+      },
+    }));
+  }
+
+  function handleChartRangeChange(value) {
+    setDashboardState((current) => ({
+      ...current,
+      chartRange: value,
     }));
   }
 
@@ -83,8 +169,8 @@ function App() {
                 <p className="eyebrow">Landing</p>
                 <h2>Operational snapshot</h2>
                 <p className="hero-text">
-                  Basic platform metrics for the last 24 hours. Navigate to
-                  Logs for route-level investigation and filtering.
+                  All-time platform metrics and key operational insights.
+                  Navigate to Logs for route-level investigation and filtering.
                 </p>
               </div>
             </section>
@@ -172,7 +258,7 @@ function App() {
         {currentPage === "logs" ? <LogsTable filters={filters} /> : null}
         {currentPage === "charts" ? (
           <Suspense fallback={<section className="stats-panel"><p className="empty-state">Loading charts...</p></section>}>
-            <ChartsPanel />
+            <ChartsPanel range={chartRange} onRangeChange={handleChartRangeChange} />
           </Suspense>
         ) : null}
       </main>

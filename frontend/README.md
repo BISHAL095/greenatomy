@@ -21,6 +21,7 @@ frontend/
 ## Features (Current)
 
 - Sticky top navbar with page-level sections: `Overview`, `Logs`, `Charts`
+- Shareable URLs that preserve the active page, logs filters, sort order, and charts window
 - Overview page with KPI cards and insight blocks (error rate, top costly/slow routes, key insights)
 - Logs page with inline filter toolbar, date sorting, pagination, status color coding, and slow-request highlighting
 - Charts page with multiple chart types via `recharts`:
@@ -56,6 +57,26 @@ npm install
 npm run dev
 ```
 
+## Shareable Dashboard URLs
+
+The dashboard now syncs key UI state into the browser URL so refresh and copy/paste keep context intact.
+
+Example:
+
+```txt
+/?page=logs&method=GET&path=/heavy&range=7d&sort=asc&chartRange=30d
+```
+
+Supported query params:
+
+- `page`: `overview`, `logs`, `charts`
+- `method`: HTTP method filter for logs
+- `path`: request path filter for logs
+- `range`: logs time range (`24h`, `7d`, `30d`, `all`, `custom`)
+- `from` / `to`: custom datetime values used when `range=custom`
+- `sort`: `desc` or `asc`
+- `chartRange`: charts window (`24h`, `7d`, `30d`)
+
 ## Build
 
 ```bash
@@ -71,10 +92,10 @@ npm test
 
 ## Current Limitations
 
-- No saved filters/dashboard presets
+- No named/saved filter presets across sessions
+- Overview cards still use the fixed all-time summary instead of URL-driven filters
 
 ## Suggested Next UI Improvements
 
 - Add auto-refresh toggle + polling interval control
-- Add shareable URLs per page/filter state
 - Add drill-down from charts to filtered logs
