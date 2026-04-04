@@ -1,0 +1,37 @@
+{
+  "name": "greenatomy-sdk",
+  "version": "0.1.0",
+  "description": "Lightweight Node.js SDK for Greenatomy logs and stats APIs.",
+  "main": "index.js",
+  "type": "commonjs",
+  "files": [
+    "README.md",
+    "http.js",
+    "index.js"
+  ],
+  "scripts": {
+    "test": "node test/basic.test.js"
+  },
+  "keywords": [
+    "telemetry",
+    "observability",
+    "energy",
+    "api",
+    "sdk",
+    "monitoring",
+    "nodejs"
+  ],
+  "author": "Bishal Pal",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BISHAL095/greenatomy.git"
+  },
+  "bugs": {
+    "url": "https://github.com/BISHAL095/greenatomy/issues"
+  },
+  "homepage": "https://github.com/BISHAL095/greenatomy#readme",
+  "dependencies": {
+    "axios": "^1.14.0"
+  }
+}
