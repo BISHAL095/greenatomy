@@ -36,7 +36,22 @@ async function getStats(req, res) {
   }
 }
 
+async function getSummary(req, res) {
+  try {
+    const filters = validateStatsQuery(req.query);
+    const summary = await logsService.fetchSummary(filters);
+    res.json(summary);
+  } catch (err) {
+    const statusCode = getStatusCode(err);
+    const message = statusCode === 500 ? "Failed to fetch summary" : err.message;
+
+    console.error("Summary fetch failed:", err.message);
+    res.status(statusCode).json({ error: message });
+  }
+}
+
 module.exports = {
   getLogs,
   getStats,
+  getSummary,
 };

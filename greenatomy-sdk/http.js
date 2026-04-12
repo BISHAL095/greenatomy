@@ -22,7 +22,7 @@ function getHttpErrorCode(statusCode) {
   return "HTTP_ERROR";
 }
 
-async function request({ baseUrl, token, method, url, params }) {
+async function request({ baseUrl, token, apiKey, timeout = 5000, method, url, params }) {
   try {
     const headers = {};
 
@@ -30,11 +30,15 @@ async function request({ baseUrl, token, method, url, params }) {
       headers.Authorization = `Bearer ${token}`;
     }
 
+    if (apiKey) {
+      headers["x-api-key"] = apiKey;
+    }
+
     const res = await axios({
       method,
       url: `${baseUrl}${url}`,
       params,
-      timeout: 5000,
+      timeout,
       headers,
     });
 

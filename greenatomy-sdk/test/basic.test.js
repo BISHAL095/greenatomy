@@ -27,19 +27,28 @@ function loadHttpWithMockedAxios(mockAxios) {
 }
 
 test("returns response data on success", async () => {
-  const request = loadHttpWithMockedAxios(async () => ({
-    data: { ok: true },
-  }));
+  let capturedConfig;
+  const request = loadHttpWithMockedAxios(async (config) => {
+    capturedConfig = config;
+    return {
+      data: { ok: true },
+    };
+  });
 
   const result = await request({
     baseUrl: "http://localhost:5000",
     token: "secret",
+    apiKey: "api-key-secret",
+    timeout: 8000,
     method: "GET",
     url: "/logs",
     params: { page: 1 },
   });
 
   assert.deepEqual(result, { ok: true });
+  assert.equal(capturedConfig.timeout, 8000);
+  assert.equal(capturedConfig.headers.Authorization, "Bearer secret");
+  assert.equal(capturedConfig.headers["x-api-key"], "api-key-secret");
 });
 
 test("maps 401 responses to UNAUTHORIZED", async () => {
@@ -85,6 +94,32 @@ test("maps timeout errors to TIMEOUT", async () => {
     (error) => {
       assert.equal(error.name, "GreenatomySdkError");
       assert.equal(error.code, "TIMEOUT");
+      return true;
+    }
+  );
+});
+
+test("maps 429 responses to RATE_LIMITED", async () => {
+  const request = loadHttpWithMockedAxios(async () => {
+    const error = new Error("Too Many Requests");
+    error.response = {
+      status: 429,
+      data: { error: "Too Many Requests" },
+    };
+    throw error;
+  });
+
+  await assert.rejects(
+    request({
+      baseUrl: "http://localhost:5000",
+      apiKey: "rate-limited-key",
+      method: "GET",
+      url: "/logs",
+    }),
+    (error) => {
+      assert.equal(error.name, "GreenatomySdkError");
+      assert.equal(error.statusCode, 429);
+      assert.equal(error.code, "RATE_LIMITED");
       return true;
     }
   );

@@ -6,6 +6,7 @@ jest.mock("../../validators/logsValidator", () => ({
 jest.mock("../../services/logsService", () => ({
   fetchLogs: jest.fn(),
   fetchStats: jest.fn(),
+  fetchSummary: jest.fn(),
 }));
 
 const logsController = require("../../controllers/logsController");
@@ -67,6 +68,21 @@ describe("logsController", () => {
     expect(logsService.fetchStats).toHaveBeenCalledWith({ range: "24h" });
     expect(res.statusCode).toBe(200);
     expect(res.payload).toEqual({ totalRequests: 2, range: "24h" });
+  });
+
+  test("getSummary returns summary payload", async () => {
+    validateStatsQuery.mockReturnValue({ range: "24h" });
+    logsService.fetchSummary.mockResolvedValue({ status: "stable", range: "24h" });
+
+    const req = { query: { range: "24h" } };
+    const res = createRes();
+
+    await logsController.getSummary(req, res);
+
+    expect(validateStatsQuery).toHaveBeenCalledWith(req.query);
+    expect(logsService.fetchSummary).toHaveBeenCalledWith({ range: "24h" });
+    expect(res.statusCode).toBe(200);
+    expect(res.payload).toEqual({ status: "stable", range: "24h" });
   });
 
   test("getLogs maps validator errors to 400", async () => {

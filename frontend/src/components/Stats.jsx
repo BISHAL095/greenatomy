@@ -50,6 +50,15 @@ function calculateDelta(current, previous) {
 }
 
 function Stats({ filters }) {
+  const [summary, setSummary] = useState({
+    status: "stable",
+    headline: "",
+    highlights: [],
+    topCostRoute: null,
+    topSlowRoute: null,
+    recommendations: [],
+    lastSeenAt: "",
+  });
   const [stats, setStats] = useState({
     totalRequests: 0,
     avgDurationMs: 0,
@@ -105,6 +114,12 @@ function Stats({ filters }) {
           buildApiConfig()
         );
         setStats(res.data);
+
+        const summaryRes = await axios.get(
+          buildApiUrl(`/logs/summary?${params.toString()}`),
+          buildApiConfig()
+        );
+        setSummary(summaryRes.data);
 
         const logsRes = await axios.get(
           buildApiUrl(`/logs?${params.toString()}&limit=200`),
@@ -291,6 +306,28 @@ function Stats({ filters }) {
         ))}
       </div>
 
+      <section className={`deployment-brief tone-${loading ? "stable" : summary.status}`}>
+        <div className="deployment-brief-copy">
+          <p className="eyebrow">Shareable brief</p>
+          <h3>{loading ? "Preparing deployment brief..." : summary.headline || "No summary available yet."}</h3>
+          <p className="section-copy">
+            {loading
+              ? "Calculating a concise operational summary."
+              : summary.lastSeenAt
+                ? `Latest telemetry observed at ${new Date(summary.lastSeenAt).toLocaleString()}.`
+                : "No events found in the selected time window."}
+          </p>
+        </div>
+        <div className="deployment-brief-grid">
+          {(loading ? [] : summary.highlights || []).map((item) => (
+            <article className="brief-metric" key={item.label}>
+              <p className="stat-label">{item.label}</p>
+              <strong>{item.value}</strong>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section className="overview-insights">
         <article className="insight-card">
           <p className="stat-label">Error rate</p>
@@ -343,6 +380,47 @@ function Stats({ filters }) {
             </ul>
           ) : (
             <p className="insight-copy">No route data available.</p>
+          )}
+        </article>
+      </section>
+
+      <section className="summary-radar">
+        <article className="insight-card">
+          <p className="stat-label">Most expensive route</p>
+          {loading ? (
+            <p className="insight-copy">--</p>
+          ) : summary.topCostRoute ? (
+            <>
+              <p className="insight-copy">{summary.topCostRoute.route}</p>
+              <strong>₹{Number(summary.topCostRoute.totalCost).toFixed(5)}</strong>
+            </>
+          ) : (
+            <p className="insight-copy">No route cost data available.</p>
+          )}
+        </article>
+
+        <article className="insight-card">
+          <p className="stat-label">Slowest route</p>
+          {loading ? (
+            <p className="insight-copy">--</p>
+          ) : summary.topSlowRoute ? (
+            <>
+              <p className="insight-copy">{summary.topSlowRoute.route}</p>
+              <strong>{summary.topSlowRoute.avgDurationMs} ms</strong>
+            </>
+          ) : (
+            <p className="insight-copy">No latency hotspot detected.</p>
+          )}
+        </article>
+
+        <article className="insight-card">
+          <p className="stat-label">Recommended next move</p>
+          {loading ? (
+            <p className="insight-copy">--</p>
+          ) : (
+            <ul className="insight-list compact">
+              {summary.recommendations?.map((item) => <li key={item}>{item}</li>)}
+            </ul>
           )}
         </article>
       </section>

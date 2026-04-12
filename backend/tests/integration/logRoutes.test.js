@@ -19,4 +19,13 @@ describe("logs routes", () => {
     expect(routeLayer).toBeDefined();
     expect(routeLayer.route.stack[0].handle).toBe(logsController.getStats);
   });
+
+  test("registers GET /summary route with getSummary controller", () => {
+    const routeLayer = router.stack.find(
+      (layer) => layer.route && layer.route.path === "/summary" && layer.route.methods.get
+    );
+
+    expect(routeLayer).toBeDefined();
+    expect(routeLayer.route.stack[0].handle).toBe(logsController.getSummary);
+  });
 });

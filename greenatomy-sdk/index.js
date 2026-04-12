@@ -2,23 +2,39 @@ const request = require("./http");
 const { GreenatomySdkError } = request;
 
 class GreenatomyClient {
-  constructor({ baseUrl, token } = {}) {
+  constructor({ baseUrl, token, apiKey, timeout = 5000 } = {}) {
     if (!baseUrl || typeof baseUrl !== "string") {
       throw new TypeError("GreenatomyClient requires a valid baseUrl");
     }
 
-    if (!token || typeof token !== "string") {
-      throw new TypeError("GreenatomyClient requires a valid token");
+    if (!token && !apiKey) {
+      throw new TypeError("GreenatomyClient requires either a token or apiKey");
+    }
+
+    if (token && typeof token !== "string") {
+      throw new TypeError("GreenatomyClient token must be a string");
+    }
+
+    if (apiKey && typeof apiKey !== "string") {
+      throw new TypeError("GreenatomyClient apiKey must be a string");
+    }
+
+    if (typeof timeout !== "number" || Number.isNaN(timeout) || timeout <= 0) {
+      throw new TypeError("GreenatomyClient timeout must be a positive number");
     }
 
     this.baseUrl = baseUrl.replace(/\/+$/, "");
     this.token = token;
+    this.apiKey = apiKey;
+    this.timeout = timeout;
   }
 
   async getLogs(params = {}) {
     return request({
       baseUrl: this.baseUrl,
       token: this.token,
+      apiKey: this.apiKey,
+      timeout: this.timeout,
       method: "GET",
       url: "/logs",
       params,
@@ -29,8 +45,22 @@ class GreenatomyClient {
     return request({
       baseUrl: this.baseUrl,
       token: this.token,
+      apiKey: this.apiKey,
+      timeout: this.timeout,
       method: "GET",
       url: "/logs/stats",
+      params,
+    });
+  }
+
+  async getSummary(params = {}) {
+    return request({
+      baseUrl: this.baseUrl,
+      token: this.token,
+      apiKey: this.apiKey,
+      timeout: this.timeout,
+      method: "GET",
+      url: "/logs/summary",
       params,
     });
   }
