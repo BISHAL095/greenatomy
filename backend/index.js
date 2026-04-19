@@ -17,6 +17,7 @@ app.use(
 );
 
 app.use(loggerMiddleware);
+
 // Protect telemetry endpoints with token auth.
 app.use(
   "/logs",

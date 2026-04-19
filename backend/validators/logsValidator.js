@@ -5,7 +5,7 @@ const RANGE_TO_MS = {
   "30d": 30 * 24 * 60 * 60 * 1000,
 };
 
-// Validate and normalize method filter into canonical uppercase form.
+// Normalize HTTP methods so downstream filters can assume canonical uppercase input.
 function normalizeMethod(method) {
   if (!method) return undefined;
 
@@ -24,12 +24,14 @@ function normalizeMethod(method) {
 function normalizePath(path) {
   if (!path) return undefined;
 
+  // Preserve partial-path matching while rejecting empty-string filters.
   const normalized = String(path).trim();
   return normalized || undefined;
 }
 
 function normalizeLimit(limit) {
   if (limit === undefined || limit === null || limit === "") {
+    // Default to a dashboard-friendly page size when the client omits `limit`.
     return 50;
   }
 
@@ -41,10 +43,11 @@ function normalizeLimit(limit) {
     throw err;
   }
 
+  // Prevent unbounded fetches from overwhelming the logs endpoint.
   return Math.min(parsed, 200);
 }
 
-// Parse date-like input into a valid Date object or throw a 400 error.
+// Parse date-like input into a valid Date object or surface a 400 validation error.
 function parseDate(value, fieldName) {
   if (!value) return undefined;
 
@@ -70,12 +73,13 @@ function normalizeRange(range) {
   throw err;
 }
 
-// Resolve either custom from/to window or preset range window.
+// Build a `createdAt` window from either explicit dates or a named relative range.
 function normalizeTimeWindow(query) {
   const from = parseDate(query.from, "from");
   const to = parseDate(query.to, "to");
 
   if (from || to) {
+    // Allow one-sided ranges by filling the missing boundary with a sensible default.
     const gte = from || new Date(0);
     const lte = to || new Date();
 
@@ -94,6 +98,7 @@ function normalizeTimeWindow(query) {
   const range = normalizeRange(query.range);
   if (range === "all") {
     return {
+      // `undefined` tells Prisma not to apply a `createdAt` filter at all.
       createdAt: undefined,
       range,
     };
@@ -109,6 +114,7 @@ function normalizeTimeWindow(query) {
 }
 
 function validateLogsQuery(query) {
+  // Logs support result limits in addition to the shared filter fields.
   const timeWindow = normalizeTimeWindow(query);
 
   return {
@@ -121,6 +127,7 @@ function validateLogsQuery(query) {
 }
 
 function validateStatsQuery(query) {
+  // Aggregate endpoints do not need pagination limits.
   const timeWindow = normalizeTimeWindow(query);
 
   return {

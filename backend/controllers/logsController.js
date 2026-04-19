@@ -1,14 +1,14 @@
 const { validateLogsQuery, validateStatsQuery } = require("../validators/logsValidator");
 const logsService = require("../services/logsService");
 
-// Map custom validation errors to HTTP codes; default to generic server error.
+// Preserve validator-provided 4xx codes and fall back to 500 for unexpected failures.
 function getStatusCode(err) {
   return Number.isInteger(err.statusCode) ? err.statusCode : 500;
 }
 
 async function getLogs(req, res) {
   try {
-    // Normalize request query before passing to service layer.
+    // Controllers only pass normalized filters into the service layer.
     const filters = validateLogsQuery(req.query);
     const logs = await logsService.fetchLogs(filters);
     res.json(logs);
@@ -23,7 +23,7 @@ async function getLogs(req, res) {
 
 async function getStats(req, res) {
   try {
-    // Stats use the same filter model as logs for consistent behavior.
+    // Stats intentionally share the same filtering semantics as the logs endpoint.
     const filters = validateStatsQuery(req.query);
     const stats = await logsService.fetchStats(filters);
     res.json(stats);
@@ -38,6 +38,7 @@ async function getStats(req, res) {
 
 async function getSummary(req, res) {
   try {
+    // Summary is another aggregate view, so it uses the stats validator path.
     const filters = validateStatsQuery(req.query);
     const summary = await logsService.fetchSummary(filters);
     res.json(summary);

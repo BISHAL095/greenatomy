@@ -1,6 +1,6 @@
 const prisma = require("../lib/prisma");
 
-// Build Prisma filter object from validated query params.
+// Translate normalized API filters into the Prisma `where` shape.
 function buildWhereClause({ method, path, createdAt }) {
   const where = {};
 
@@ -22,7 +22,7 @@ function buildWhereClause({ method, path, createdAt }) {
 async function fetchLogs(filters) {
   const where = buildWhereClause(filters);
 
-  // Query newest-first; UI handles optional re-sorting for display.
+  // Return newest entries first so dashboards can render recent traffic immediately.
   return prisma.requestLog.findMany({
     where,
     orderBy: { createdAt: "desc" },
@@ -33,6 +33,7 @@ async function fetchLogs(filters) {
 async function fetchStats(filters) {
   const where = buildWhereClause(filters);
 
+  // Compute aggregate metrics once in the database instead of reducing in application code.
   const stats = await prisma.requestLog.aggregate({
     where,
     _count: { id: true },
@@ -58,6 +59,7 @@ function toLatency(value) {
 }
 
 function getStatusTone({ errorRate, avgDurationMs, totalCost }) {
+  // Treat reliability, latency, and cost as independent escalation signals.
   if (errorRate >= 8 || avgDurationMs >= 1500 || totalCost >= 1) {
     return "critical";
   }
@@ -71,6 +73,8 @@ function getStatusTone({ errorRate, avgDurationMs, totalCost }) {
 
 async function fetchSummary(filters) {
   const where = buildWhereClause(filters);
+
+  // Pull a broad enough sample for per-route insights while reusing database aggregates for totals.
   const [stats, logs] = await Promise.all([
     fetchStats(filters),
     prisma.requestLog.findMany({
@@ -95,6 +99,7 @@ async function fetchSummary(filters) {
 
   const routeMap = new Map();
   for (const log of logs) {
+    // Group by method + path so expensive and slow routes can be ranked together.
     const key = `${log.method || "UNK"} ${log.path || "/"}`;
     const current = routeMap.get(key) || {
       route: key,
@@ -116,6 +121,7 @@ async function fetchSummary(filters) {
     Array.from(routeMap.values())
       .map((route) => ({
         ...route,
+        // Average latency is more useful than total latency when comparing uneven traffic volumes.
         avgDurationMs: route.hits > 0 ? route.totalDurationMs / route.hits : 0,
       }))
       .sort((a, b) => b.avgDurationMs - a.avgDurationMs)[0] || null;
@@ -140,6 +146,7 @@ async function fetchSummary(filters) {
   ];
 
   const recommendations = [];
+  // Keep recommendations deterministic so the UI can present concise next actions.
   if (topSlowRoute && topSlowRoute.avgDurationMs > 1000) {
     recommendations.push(`Investigate latency on ${topSlowRoute.route}.`);
   }

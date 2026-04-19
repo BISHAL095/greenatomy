@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 
-// https://vite.dev/config/
+// Proxy backend routes in development so the frontend can call relative API paths.
 export default defineConfig({
   plugins: [
     react(),

@@ -10,6 +10,7 @@ vi.mock("axios", () => ({
 }));
 
 function buildLogs(count = 12) {
+  // Generate deterministic fixtures so sorting and pagination assertions stay stable.
   const base = Date.parse("2026-03-30T00:00:00.000Z");
   return Array.from({ length: count }, (_, index) => ({
     id: `log-${index}`,
@@ -26,6 +27,7 @@ function buildLogs(count = 12) {
 
 beforeEach(() => {
   window.history.replaceState(null, "", "/");
+  // Mock the three dashboard reads: stats, summary, and logs.
   axios.get.mockImplementation((url) => {
     if (url.includes("/logs/stats")) {
       return Promise.resolve({

@@ -31,7 +31,7 @@ const STATUS_COLORS = {
   "5xx": "#ff9f9f",
 };
 
-// Normalize timestamps into chart buckets based on selected range.
+// Collapse timestamps into hourly or daily buckets depending on the selected window.
 function getBucketStart(date, range) {
   const d = new Date(date);
 
@@ -44,7 +44,7 @@ function getBucketStart(date, range) {
   return d;
 }
 
-// Build human-friendly x-axis labels per bucket.
+// Format bucket labels for chart axes without exposing raw timestamps.
 function formatBucketLabel(bucketDate, range) {
   const date = new Date(bucketDate);
 
@@ -55,7 +55,7 @@ function formatBucketLabel(bucketDate, range) {
   return date.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
-// Bucket latency into discrete ranges for distribution chart.
+// Group request latency into fixed bands for the distribution chart.
 function getLatencyBucket(durationMs) {
   const d = Number(durationMs || 0);
   if (d < 200) return "<200ms";
@@ -65,7 +65,7 @@ function getLatencyBucket(durationMs) {
   return ">2s";
 }
 
-// Build time-series points for requests/energy/cost trends.
+// Aggregate logs into chart-ready time-series points.
 function buildTimeSeries(logs, range) {
   const bucketMap = new Map();
 
@@ -96,7 +96,7 @@ function buildTimeSeries(logs, range) {
     }));
 }
 
-// Build status-class breakdown for pie chart.
+// Collapse raw status codes into coarse health bands for the pie chart.
 function buildStatusSeries(logs) {
   let ok = 0;
   let warn = 0;
@@ -116,7 +116,7 @@ function buildStatusSeries(logs) {
   ];
 }
 
-// Build latency distribution for bar chart.
+// Count how many requests land in each latency bucket.
 function buildLatencySeries(logs) {
   const buckets = {
     "<200ms": 0,
@@ -147,6 +147,7 @@ function ChartsPanel({ range, onRangeChange }) {
       setError("");
 
       try {
+        // Charts use the same raw log feed and derive all visual series client-side.
         const params = new URLSearchParams({
           limit: "200",
           range,
@@ -174,7 +175,7 @@ function ChartsPanel({ range, onRangeChange }) {
   }, [range]);
 
   const totals = useMemo(() => {
-    // Window totals for quick executive summary above charts.
+    // Surface compact totals above the visualizations for quick readouts.
     return series.reduce(
       (acc, point) => {
         acc.requests += point.requests;

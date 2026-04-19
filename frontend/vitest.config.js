@@ -1,6 +1,7 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 
+// Keep test config aligned with the Vite React pipeline and jsdom environment.
 export default defineConfig({
   plugins: [react()],
   test: {

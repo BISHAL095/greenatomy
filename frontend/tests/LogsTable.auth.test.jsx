@@ -11,6 +11,7 @@ vi.mock("axios", () => ({
 
 describe("LogsTable auth errors", () => {
   beforeEach(() => {
+    // Simulate a protected backend route with no valid API token.
     axios.get.mockRejectedValue({ response: { status: 401 } });
   });
 

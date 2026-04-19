@@ -1,13 +1,13 @@
 export const API_BASE = import.meta.env.VITE_API_BASE ?? "";
 export const API_TOKEN = import.meta.env.VITE_API_TOKEN ?? "";
 
-// Build absolute API URL using configured backend base.
+// Prefix relative API paths when the frontend is pointing at a separate backend origin.
 export function buildApiUrl(path) {
   return `${API_BASE}${path}`;
 }
 
 export function buildApiConfig() {
-  // Keep requests unauthenticated in local dev when token is not configured.
+  // Skip auth headers in local development unless an API token is explicitly configured.
   if (!API_TOKEN) {
     return {};
   }

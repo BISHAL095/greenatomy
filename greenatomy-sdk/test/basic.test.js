@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 function loadHttpWithMockedAxios(mockAxios) {
+  // Re-require the transport module with a temporary axios implementation for isolated tests.
   const httpPath = require.resolve("../http");
   const axiosPath = require.resolve("axios");
 

@@ -23,6 +23,7 @@ class GreenatomyClient {
       throw new TypeError("GreenatomyClient timeout must be a positive number");
     }
 
+    // Normalize the base URL once so request methods can append fixed endpoint paths safely.
     this.baseUrl = baseUrl.replace(/\/+$/, "");
     this.token = token;
     this.apiKey = apiKey;
@@ -30,6 +31,7 @@ class GreenatomyClient {
   }
 
   async getLogs(params = {}) {
+    // Pass query params through unchanged so the SDK mirrors the HTTP API surface.
     return request({
       baseUrl: this.baseUrl,
       token: this.token,
@@ -42,6 +44,7 @@ class GreenatomyClient {
   }
 
   async getStats(params = {}) {
+    // Stats and summary reuse the same transport layer and auth configuration.
     return request({
       baseUrl: this.baseUrl,
       token: this.token,

@@ -8,7 +8,7 @@ const RANGE_TO_MS = {
   "30d": 30 * 24 * 60 * 60 * 1000,
 };
 
-// Resolve current analysis window from preset range or custom dates.
+// Resolve the active comparison window from either preset ranges or explicit dates.
 function getWindowRange(filters) {
   if (filters.range === "all") {
     return { from: null, to: null, windowMs: null };
@@ -29,7 +29,7 @@ function getWindowRange(filters) {
   return { from, to, windowMs };
 }
 
-// Compute high-signal metrics from raw logs for insight blocks.
+// Derive a small set of metrics from raw logs for narrative insight cards.
 function calculateMetrics(logs) {
   const totalRequests = logs.length;
   const totalDuration = logs.reduce((sum, log) => sum + Number(log.durationMs || 0), 0);
@@ -45,6 +45,7 @@ function calculateMetrics(logs) {
 }
 
 function calculateDelta(current, previous) {
+  // Hide percentage deltas when the baseline is empty to avoid misleading infinity values.
   if (!previous || previous === 0) return null;
   return ((current - previous) / previous) * 100;
 }
@@ -87,6 +88,7 @@ function Stats({ filters }) {
       setError("");
 
       try {
+        // Keep all dashboard requests aligned on the same filter set.
         const params = new URLSearchParams();
 
         if (filters.method) {
@@ -132,7 +134,7 @@ function Stats({ filters }) {
         const errorRate = logs.length ? (errors / logs.length) * 100 : 0;
         const lastSeenAt = logs[0]?.createdAt || "";
 
-        // Aggregate per-route cost and latency to surface top hotspots.
+        // Rank routes separately by cost concentration and average latency.
         const routeMap = new Map();
         const slowRouteMap = new Map();
         for (const log of logs) {
@@ -173,6 +175,7 @@ function Stats({ filters }) {
         };
 
         if (from && windowMs) {
+          // Compare the current window with the immediately preceding window of the same size.
           const prevTo = new Date(from.getTime());
           const prevFrom = new Date(prevTo.getTime() - windowMs);
 
@@ -198,7 +201,7 @@ function Stats({ filters }) {
           };
         }
 
-        // Generate lightweight rule-based insights for the overview narrative.
+        // Generate deterministic rule-based copy so the UI stays predictable.
         const messages = [];
         if (errorRate > 5) {
           messages.push(`High error rate detected (${errorRate.toFixed(2)}%).`);

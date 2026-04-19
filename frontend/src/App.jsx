@@ -3,7 +3,7 @@ import Stats from "./components/Stats";
 import LogsTable from "./components/LogsTable";
 import "./App.css";
 
-// Load chart bundle only when charts page is visited.
+// Defer the chart bundle until the charts view is actually opened.
 const ChartsPanel = lazy(() => import("./components/ChartsPanel"));
 
 const VALID_PAGES = new Set(["overview", "logs", "charts"]);
@@ -12,6 +12,7 @@ const VALID_SORTS = new Set(["asc", "desc"]);
 const VALID_CHART_RANGES = new Set(["24h", "7d", "30d"]);
 
 function readDashboardState() {
+  // Treat the URL as the persisted dashboard state so refresh/share works without extra storage.
   const params = new URLSearchParams(window.location.search);
   const page = params.get("page");
   const range = params.get("range");
@@ -33,6 +34,7 @@ function readDashboardState() {
 }
 
 function buildDashboardSearch({ currentPage, filters, chartRange }) {
+  // Only serialize filters that are currently meaningful to keep URLs compact.
   const params = new URLSearchParams();
 
   params.set("page", currentPage);
@@ -66,6 +68,7 @@ function App() {
   const { currentPage, filters, chartRange } = dashboardState;
 
   useEffect(() => {
+    // Mirror browser back/forward navigation into component state.
     const syncFromUrl = () => {
       setDashboardState(readDashboardState());
     };
@@ -77,6 +80,7 @@ function App() {
   }, []);
 
   useEffect(() => {
+    // Replace the current history entry so transient dashboard changes do not spam back-stack history.
     const search = buildDashboardSearch(dashboardState);
     const nextUrl = `${window.location.pathname}?${search}${window.location.hash}`;
 
@@ -103,6 +107,7 @@ function App() {
   }
 
   function handleRangeChange(value) {
+    // Clear stale custom boundaries when switching back to a preset range.
     setDashboardState((current) => ({
       ...current,
       filters: {
@@ -121,6 +126,7 @@ function App() {
   }
 
   const overviewFilters = {
+    // The overview is intentionally pinned to all-time aggregates.
     method: "",
     path: "",
     range: "all",
