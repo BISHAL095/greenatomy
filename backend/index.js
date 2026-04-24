@@ -9,6 +9,10 @@ const env = require("./config/env");
 // Express app bootstrap for telemetry APIs and demo routes.
 const app = express();
 
+function logServerEvent(message, meta = {}) {
+  console.info(JSON.stringify({ level: "info", message, ...meta }));
+}
+
 app.use(
   cors({
     origin: env.corsOrigin,
@@ -33,23 +37,25 @@ app.get("/health", (req, res) => {
   res.json({ ok: true });
 });
 
-app.get("/test", (req, res) => {
-  res.send("testing..");
-});
+if (env.nodeEnv !== "production") {
+  // Keep demo routes available in development without exposing them in production.
+  app.get("/test", (req, res) => {
+    res.send("testing..");
+  });
 
-app.get("/heavy", async (req, res) => {
-  console.log("Request received, starting delay...");
+  app.get("/heavy", async (req, res) => {
+    const delay = 3000;
+    logServerEvent("Heavy route invoked", { path: req.path, delayMs: delay });
 
-  const delay = 3000;
-
-  setTimeout(() => {
-    res.send("This response was delayed by 3 seconds.");
-  }, delay);
-});
+    setTimeout(() => {
+      res.send("This response was delayed by 3 seconds.");
+    }, delay);
+  });
+}
 
 if (require.main === module) {
   app.listen(env.port, () => {
-    console.log(`Example app listening on port ${env.port}`);
+    logServerEvent("Server listening", { port: env.port, nodeEnv: env.nodeEnv });
   });
 }
 

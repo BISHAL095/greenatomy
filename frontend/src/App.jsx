@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useState } from "react";
+import { Suspense, lazy, useDeferredValue, useEffect, useState } from "react";
 import Stats from "./components/Stats";
 import LogsTable from "./components/LogsTable";
 import "./App.css";
@@ -66,6 +66,7 @@ function buildDashboardSearch({ currentPage, filters, chartRange }) {
 function App() {
   const [dashboardState, setDashboardState] = useState(readDashboardState);
   const { currentPage, filters, chartRange } = dashboardState;
+  const deferredFilters = useDeferredValue(filters);
 
   useEffect(() => {
     // Mirror browser back/forward navigation into component state.
@@ -261,7 +262,7 @@ function App() {
           </section>
         ) : null}
 
-        {currentPage === "logs" ? <LogsTable filters={filters} /> : null}
+        {currentPage === "logs" ? <LogsTable filters={deferredFilters} /> : null}
         {currentPage === "charts" ? (
           <Suspense fallback={<section className="stats-panel"><p className="empty-state">Loading charts...</p></section>}>
             <ChartsPanel range={chartRange} onRangeChange={handleChartRangeChange} />

@@ -18,6 +18,7 @@ import {
   YAxis,
 } from "recharts";
 import { buildApiConfig, buildApiUrl } from "../lib/api";
+import { buildLogsSearchParams } from "../lib/logFilters";
 
 const RANGE_OPTIONS = [
   { value: "24h", label: "Last 24h" },
@@ -148,10 +149,7 @@ function ChartsPanel({ range, onRangeChange }) {
 
       try {
         // Charts use the same raw log feed and derive all visual series client-side.
-        const params = new URLSearchParams({
-          limit: "200",
-          range,
-        });
+        const params = buildLogsSearchParams({ range }, { limit: 200 });
 
         const res = await axios.get(buildApiUrl(`/logs?${params.toString()}`), buildApiConfig());
         const logs = Array.isArray(res.data) ? res.data : [];

@@ -14,12 +14,23 @@ function getWindowRange(filters) {
     return { from: null, to: null, windowMs: null };
   }
 
-  if (filters.range === "custom" && filters.from && filters.to) {
-    const from = new Date(filters.from);
-    const to = new Date(filters.to);
-    const diff = to.getTime() - from.getTime();
-    if (Number.isFinite(diff) && diff > 0) {
-      return { from, to, windowMs: diff };
+  if (filters.range === "custom") {
+    const from = filters.from ? new Date(filters.from) : null;
+    const to = filters.to ? new Date(filters.to) : null;
+
+    const hasValidFrom = !from || Number.isFinite(from.getTime());
+    const hasValidTo = !to || Number.isFinite(to.getTime());
+
+    if (hasValidFrom && hasValidTo) {
+      if (from && to) {
+        const diff = to.getTime() - from.getTime();
+        if (diff > 0) {
+          return { from, to, windowMs: diff };
+        }
+      } else if (from || to) {
+        // Allow open-ended custom filters so users can query from or up to a single date.
+        return { from, to, windowMs: null };
+      }
     }
   }
 
@@ -90,6 +101,7 @@ function Stats({ filters }) {
       try {
         // Keep all dashboard requests aligned on the same filter set.
         const params = new URLSearchParams();
+        const { from, to, windowMs } = getWindowRange(filters);
 
         if (filters.method) {
           params.set("method", filters.method);
@@ -100,12 +112,12 @@ function Stats({ filters }) {
         }
 
         if (filters.range === "custom") {
-          if (filters.from) {
-            params.set("from", new Date(filters.from).toISOString());
+          if (from) {
+            params.set("from", from.toISOString());
           }
 
-          if (filters.to) {
-            params.set("to", new Date(filters.to).toISOString());
+          if (to) {
+            params.set("to", to.toISOString());
           }
         } else if (filters.range) {
           params.set("range", filters.range);
@@ -166,7 +178,6 @@ function Stats({ filters }) {
           .sort((a, b) => b.avgDurationMs - a.avgDurationMs)
           .slice(0, 3);
 
-        const { from, windowMs } = getWindowRange(filters);
         let deltas = {
           requests: null,
           latency: null,
@@ -234,7 +245,6 @@ function Stats({ filters }) {
           deltas,
         });
       } catch (err) {
-        console.log(err);
         const status = err?.response?.status;
         if (status === 401) {
           setError("Unauthorized. Set VITE_API_TOKEN to access protected routes.");

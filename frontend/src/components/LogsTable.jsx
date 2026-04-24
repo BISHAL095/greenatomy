@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { buildApiConfig, buildApiUrl } from "../lib/api";
+import { buildLogsSearchParams } from "../lib/logFilters";
 
 // Requests above this threshold are visually flagged for quick scanning.
 const SLOW_REQUEST_THRESHOLD_MS = 1000;
@@ -33,32 +34,11 @@ function LogsTable({ filters }) {
 
       try {
         // Fetch a capped window once, then paginate and sort in the client for responsiveness.
-        const params = new URLSearchParams({ limit: "200" });
-
-        if (filters.method) {
-          params.set("method", filters.method);
-        }
-
-        if (filters.path) {
-          params.set("path", filters.path);
-        }
-
-        if (filters.range === "custom") {
-          if (filters.from) {
-            params.set("from", new Date(filters.from).toISOString());
-          }
-
-          if (filters.to) {
-            params.set("to", new Date(filters.to).toISOString());
-          }
-        } else if (filters.range) {
-          params.set("range", filters.range);
-        }
+        const params = buildLogsSearchParams(filters, { limit: 200 });
 
         const res = await axios.get(buildApiUrl(`/logs?${params.toString()}`), buildApiConfig());
         setRawLogs(res.data);
       } catch (err) {
-        console.log(err);
         const status = err?.response?.status;
         if (status === 401) {
           setError("Unauthorized. Set VITE_API_TOKEN to access protected routes.");
