@@ -4,7 +4,12 @@ const prisma = require("../lib/prisma");
 
 // Ignore endpoints that are part of the monitoring surface itself.
 function shouldSkipLogging(req) {
-  return req.path.startsWith("/logs") || req.path === "/health" || req.method === "OPTIONS";
+  return (
+    req.path.startsWith("/logs") ||
+    req.path.startsWith("/auth") ||
+    req.path === "/health" ||
+    req.method === "OPTIONS"
+  );
 }
 
 function loggerMiddleware(req, res, next) {

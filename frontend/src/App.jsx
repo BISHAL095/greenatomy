@@ -3,7 +3,6 @@ import axios from "axios";
 import Stats from "./components/Stats";
 import LogsTable from "./components/LogsTable";
 import {
-  API_TOKEN,
   buildApiUrl,
   clearStoredAuthToken,
   getStoredAuthToken,
@@ -181,10 +180,9 @@ function App() {
   const [sessionUser, setSessionUser] = useState(null);
   const { currentPage, filters, chartRange } = dashboardState;
   const deferredFilters = useDeferredValue(filters);
-  const hasStaticApiToken = Boolean(API_TOKEN);
 
   useEffect(() => {
-    if (!sessionToken || hasStaticApiToken) {
+    if (!sessionToken) {
       return;
     }
 
@@ -212,7 +210,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [sessionToken, hasStaticApiToken]);
+  }, [sessionToken]);
 
   useEffect(() => {
     // Mirror browser back/forward navigation into component state.
@@ -298,7 +296,7 @@ function App() {
     setSessionUser(null);
   }
 
-  if (!hasStaticApiToken && !sessionToken) {
+  if (!sessionToken) {
     return (
       <AuthScreen
         mode={authMode}
@@ -311,17 +309,21 @@ function App() {
   return (
     <div className="app-shell">
       <header className="site-navbar">
-        <div className="site-brand">
-          <p className="eyebrow">Green-Ops Monitor</p>
-          <p className="brand-title">Carbon-aware backend telemetry</p>
+        <div className="navbar-top">
+          <div className="site-brand">
+            <p className="eyebrow">Green-Ops Monitor</p>
+            <p className="brand-title">Carbon-aware backend telemetry</p>
+          </div>
+          <div className="session-tools">
+            <p className="session-copy">
+              {sessionUser?.email || "Authenticated session"}
+            </p>
+            <button type="button" className="logout-btn" onClick={handleLogout}>
+              Logout
+            </button>
+          </div>
         </div>
-        <div className="session-tools">
-          <p className="session-copy">
-            {hasStaticApiToken
-              ? "Static admin access"
-              : sessionUser?.email || "Authenticated session"}
-          </p>
-        <nav className="page-nav" aria-label="Dashboard pages">
+        <nav className="page-nav navbar-tabs" aria-label="Dashboard pages">
           <button
             type="button"
             className={`page-link ${currentPage === "overview" ? "active" : ""}`}
@@ -344,12 +346,6 @@ function App() {
             Charts
           </button>
         </nav>
-          {!hasStaticApiToken ? (
-            <button type="button" className="page-link" onClick={handleLogout}>
-              Logout
-            </button>
-          ) : null}
-        </div>
       </header>
 
       <main className="dashboard">

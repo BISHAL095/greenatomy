@@ -11,7 +11,7 @@ vi.mock("axios", () => ({
 
 describe("LogsTable auth errors", () => {
   beforeEach(() => {
-    // Simulate a protected backend route with no valid API token.
+    // Simulate a protected backend route without a valid signed session.
     axios.get.mockRejectedValue({ response: { status: 401 } });
   });
 
@@ -23,7 +23,7 @@ describe("LogsTable auth errors", () => {
     );
 
     expect(
-      await screen.findByText("Unauthorized. Set VITE_API_TOKEN to access protected routes.")
+      await screen.findByText("Unauthorized. Please sign in to access request logs.")
     ).toBeInTheDocument();
   });
 });

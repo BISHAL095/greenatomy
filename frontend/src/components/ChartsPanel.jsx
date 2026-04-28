@@ -160,7 +160,7 @@ function ChartsPanel({ range, onRangeChange }) {
       } catch (err) {
         const status = err?.response?.status;
         if (status === 401) {
-          setError("Unauthorized. Set VITE_API_TOKEN to access protected routes.");
+          setError("Unauthorized. Please sign in to access chart data.");
         } else {
           setError("Unable to load chart data.");
         }
