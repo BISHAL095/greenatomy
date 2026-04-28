@@ -6,6 +6,7 @@ import App from "../src/App";
 vi.mock("axios", () => ({
   default: {
     get: vi.fn(),
+    post: vi.fn(),
   },
 }));
 
@@ -27,8 +28,21 @@ function buildLogs(count = 12) {
 
 beforeEach(() => {
   window.history.replaceState(null, "", "/");
+  window.localStorage.setItem("greenatomy.auth.token", "test-session-token");
   // Mock the three dashboard reads: stats, summary, and logs.
   axios.get.mockImplementation((url) => {
+    if (url.includes("/auth/me")) {
+      return Promise.resolve({
+        data: {
+          user: {
+            id: "user-1",
+            email: "test@example.com",
+          },
+          projects: [],
+        },
+      });
+    }
+
     if (url.includes("/logs/stats")) {
       return Promise.resolve({
         data: {
@@ -37,6 +51,20 @@ beforeEach(() => {
           totalEnergyKwh: 0.0012,
           totalCost: 0.02,
           range: "24h",
+        },
+      });
+    }
+
+    if (url.includes("/logs/summary")) {
+      return Promise.resolve({
+        data: {
+          status: "stable",
+          headline: "All systems nominal.",
+          highlights: [],
+          topCostRoute: null,
+          topSlowRoute: null,
+          recommendations: [],
+          lastSeenAt: "",
         },
       });
     }

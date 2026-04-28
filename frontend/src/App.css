@@ -3,6 +3,58 @@
   min-height: 100vh;
 }
 
+.auth-shell {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 1.5rem;
+}
+
+.auth-panel {
+  width: min(860px, 100%);
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 1.5rem;
+  padding: 1.75rem;
+  border-radius: 28px;
+  border: 1px solid rgba(143, 173, 160, 0.2);
+  background:
+    linear-gradient(180deg, rgba(17, 38, 31, 0.9), rgba(9, 22, 18, 0.96)),
+    rgba(10, 19, 16, 0.9);
+  box-shadow: 0 24px 80px rgba(3, 12, 10, 0.36);
+}
+
+.auth-copy,
+.auth-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.auth-submit,
+.auth-switch {
+  border: 0;
+  border-radius: 14px;
+  font: inherit;
+}
+
+.auth-submit {
+  padding: 0.9rem 1rem;
+  background: #f2b051;
+  color: #102119;
+  font-weight: 700;
+}
+
+.auth-submit:disabled {
+  opacity: 0.7;
+}
+
+.auth-switch {
+  padding: 0;
+  background: transparent;
+  color: #f2b051;
+  text-align: left;
+}
+
 .dashboard {
   position: relative;
   z-index: 1;
@@ -63,6 +115,18 @@
     rgba(10, 19, 16, 0.9);
   box-shadow: 0 12px 32px rgba(3, 12, 10, 0.3);
   backdrop-filter: blur(14px);
+}
+
+.session-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.session-copy {
+  margin: 0;
+  color: rgba(228, 237, 232, 0.68);
+  font-size: 0.88rem;
 }
 
 .site-brand {
@@ -517,6 +581,62 @@
 
 .table-shell tbody tr:hover {
   background: rgba(242, 176, 81, 0.05);
+}
+
+@media (max-width: 900px) {
+  .auth-panel,
+  .hero-panel,
+  .deployment-brief,
+  .chart-card.split {
+    grid-template-columns: 1fr;
+  }
+
+  .site-navbar {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .session-tools {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .section-heading,
+  .table-controls,
+  .pagination-row {
+    flex-direction: column;
+    align-items: start;
+  }
+
+  .stats-grid,
+  .overview-insights,
+  .summary-radar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .inline-filters {
+    grid-template-columns: repeat(2, minmax(140px, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard {
+    width: min(100%, calc(100% - 1rem));
+    padding-top: 1rem;
+  }
+
+  .site-navbar {
+    width: min(100%, calc(100% - 1rem));
+    margin-top: 0.5rem;
+  }
+
+  .stats-grid,
+  .overview-insights,
+  .summary-radar,
+  .inline-filters {
+    grid-template-columns: 1fr;
+  }
 }
 
 .table-shell tbody tr.row-slow {

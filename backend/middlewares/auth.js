@@ -1,4 +1,5 @@
 const env = require("../config/env");
+const { verifyAuthToken } = require("../utils/authTokens");
 
 // Extract Bearer token from Authorization header.
 function getBearerToken(header) {
@@ -22,12 +23,25 @@ function authMiddleware(req, res, next) {
   const apiKeyToken = typeof req.headers["x-api-key"] === "string" ? req.headers["x-api-key"].trim() : "";
   const token = bearerToken || apiKeyToken;
 
-  if (!token || token !== env.authToken) {
-    res.status(401).json({ error: "Unauthorized" });
+  if (token && token === env.authToken) {
+    req.auth = { type: "system" };
+    next();
     return;
   }
 
-  next();
+  const payload = verifyAuthToken(token);
+  if (payload?.sub) {
+    req.auth = {
+      type: "user",
+      userId: payload.sub,
+      email: payload.email,
+      projectId: payload.projectId || null,
+    };
+    next();
+    return;
+  }
+
+  res.status(401).json({ error: "Unauthorized" });
 }
 
 module.exports = authMiddleware;

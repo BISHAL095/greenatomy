@@ -4,5 +4,6 @@ import { afterEach } from "vitest";
 
 afterEach(() => {
   // Reset DOM state between tests to avoid leaked nodes and assertions.
+  window.localStorage.clear();
   cleanup();
 });

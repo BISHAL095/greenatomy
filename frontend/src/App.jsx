@@ -1,6 +1,14 @@
 import { Suspense, lazy, useDeferredValue, useEffect, useState } from "react";
+import axios from "axios";
 import Stats from "./components/Stats";
 import LogsTable from "./components/LogsTable";
+import {
+  API_TOKEN,
+  buildApiUrl,
+  clearStoredAuthToken,
+  getStoredAuthToken,
+  setStoredAuthToken,
+} from "./lib/api";
 import "./App.css";
 
 // Defer the chart bundle until the charts view is actually opened.
@@ -63,10 +71,148 @@ function buildDashboardSearch({ currentPage, filters, chartRange }) {
   return params.toString();
 }
 
+function AuthScreen({ mode, onModeChange, onAuthenticated }) {
+  const [form, setForm] = useState({
+    email: "",
+    password: "",
+    projectName: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      const endpoint = mode === "register" ? "/auth/register" : "/auth/login";
+      const payload =
+        mode === "register"
+          ? {
+              email: form.email,
+              password: form.password,
+              projectName: form.projectName,
+            }
+          : {
+              email: form.email,
+              password: form.password,
+            };
+
+      const res = await axios.post(buildApiUrl(endpoint), payload);
+      onAuthenticated(res.data);
+    } catch (err) {
+      setError(err?.response?.data?.error || "Unable to complete authentication.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <main className="auth-shell">
+      <section className="auth-panel">
+        <div className="auth-copy">
+          <p className="eyebrow">Account</p>
+          <h1>{mode === "register" ? "Create your Greenatomy workspace" : "Sign in to your workspace"}</h1>
+          <p className="hero-text">
+            {mode === "register"
+              ? "Create an account and default project so your hosted dashboard can grow beyond the single shared token model."
+              : "Use your account to access the hosted dashboard with a signed session instead of a static admin token."}
+          </p>
+        </div>
+
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <label className="field">
+            <span>Email</span>
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm((current) => ({ ...current, email: e.target.value }))}
+              placeholder="you@example.com"
+              required
+            />
+          </label>
+
+          <label className="field">
+            <span>Password</span>
+            <input
+              type="password"
+              value={form.password}
+              onChange={(e) => setForm((current) => ({ ...current, password: e.target.value }))}
+              placeholder="At least 8 characters"
+              required
+            />
+          </label>
+
+          {mode === "register" ? (
+            <label className="field">
+              <span>Project name</span>
+              <input
+                value={form.projectName}
+                onChange={(e) => setForm((current) => ({ ...current, projectName: e.target.value }))}
+                placeholder="Default project"
+              />
+            </label>
+          ) : null}
+
+          {error ? <p className="status-banner error">{error}</p> : null}
+
+          <button type="submit" className="auth-submit" disabled={loading}>
+            {loading ? "Please wait..." : mode === "register" ? "Create account" : "Sign in"}
+          </button>
+
+          <button
+            type="button"
+            className="auth-switch"
+            onClick={() => onModeChange(mode === "register" ? "login" : "register")}
+          >
+            {mode === "register" ? "Already have an account? Sign in" : "Need an account? Register"}
+          </button>
+        </form>
+      </section>
+    </main>
+  );
+}
+
 function App() {
   const [dashboardState, setDashboardState] = useState(readDashboardState);
+  const [authMode, setAuthMode] = useState("login");
+  const [sessionToken, setSessionToken] = useState(getStoredAuthToken);
+  const [sessionUser, setSessionUser] = useState(null);
   const { currentPage, filters, chartRange } = dashboardState;
   const deferredFilters = useDeferredValue(filters);
+  const hasStaticApiToken = Boolean(API_TOKEN);
+
+  useEffect(() => {
+    if (!sessionToken || hasStaticApiToken) {
+      return;
+    }
+
+    let cancelled = false;
+
+    axios
+      .get(buildApiUrl("/auth/me"), {
+        headers: {
+          Authorization: `Bearer ${sessionToken}`,
+        },
+      })
+      .then((res) => {
+        if (!cancelled) {
+          setSessionUser(res.data.user);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          clearStoredAuthToken();
+          setSessionToken("");
+          setSessionUser(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionToken, hasStaticApiToken]);
 
   useEffect(() => {
     // Mirror browser back/forward navigation into component state.
@@ -136,6 +282,32 @@ function App() {
     sort: "desc",
   };
 
+  function handleAuthenticated(payload) {
+    if (!payload?.token) {
+      return;
+    }
+
+    setStoredAuthToken(payload.token);
+    setSessionToken(payload.token);
+    setSessionUser(payload.user || null);
+  }
+
+  function handleLogout() {
+    clearStoredAuthToken();
+    setSessionToken("");
+    setSessionUser(null);
+  }
+
+  if (!hasStaticApiToken && !sessionToken) {
+    return (
+      <AuthScreen
+        mode={authMode}
+        onModeChange={setAuthMode}
+        onAuthenticated={handleAuthenticated}
+      />
+    );
+  }
+
   return (
     <div className="app-shell">
       <header className="site-navbar">
@@ -143,6 +315,12 @@ function App() {
           <p className="eyebrow">Green-Ops Monitor</p>
           <p className="brand-title">Carbon-aware backend telemetry</p>
         </div>
+        <div className="session-tools">
+          <p className="session-copy">
+            {hasStaticApiToken
+              ? "Static admin access"
+              : sessionUser?.email || "Authenticated session"}
+          </p>
         <nav className="page-nav" aria-label="Dashboard pages">
           <button
             type="button"
@@ -166,6 +344,12 @@ function App() {
             Charts
           </button>
         </nav>
+          {!hasStaticApiToken ? (
+            <button type="button" className="page-link" onClick={handleLogout}>
+              Logout
+            </button>
+          ) : null}
+        </div>
       </header>
 
       <main className="dashboard">
