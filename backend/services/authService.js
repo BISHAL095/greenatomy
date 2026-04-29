@@ -132,8 +132,53 @@ async function getUserProfile(userId) {
   };
 }
 
+async function createProjectForUser(userId, { name }) {
+  const normalizedName = String(name || "").trim();
+
+  if (!normalizedName) {
+    const err = new Error("Project name is required.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    const err = new Error("User not found.");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  try {
+    const project = await prisma.project.create({
+      data: {
+        userId,
+        name: normalizedName,
+      },
+    });
+
+    return {
+      project: {
+        id: project.id,
+        name: project.name,
+      },
+    };
+  } catch (err) {
+    if (err?.code === "P2002") {
+      const duplicateErr = new Error("Project name already exists.");
+      duplicateErr.statusCode = 409;
+      throw duplicateErr;
+    }
+
+    throw err;
+  }
+}
+
 module.exports = {
   registerUser,
   loginUser,
   getUserProfile,
+  createProjectForUser,
 };

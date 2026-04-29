@@ -23,7 +23,7 @@ function getHttpErrorCode(statusCode) {
   return "HTTP_ERROR";
 }
 
-async function request({ baseUrl, token, apiKey, timeout = 5000, method, url, params }) {
+async function request({ baseUrl, token, apiKey, timeout = 5000, method, url, params, data }) {
   try {
     const headers = {};
 
@@ -40,6 +40,7 @@ async function request({ baseUrl, token, apiKey, timeout = 5000, method, url, pa
       method,
       url: `${baseUrl}${url}`,
       params,
+      data,
       timeout,
       headers,
     });

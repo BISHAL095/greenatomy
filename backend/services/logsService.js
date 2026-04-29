@@ -1,8 +1,13 @@
 const prisma = require("../lib/prisma");
+const energyCalculator = require("../utils/energyCalculator");
 
 // Translate normalized API filters into the Prisma `where` shape.
-function buildWhereClause({ method, path, createdAt }) {
+function buildWhereClause({ method, path, createdAt, projectId }) {
   const where = {};
+
+  if (projectId) {
+    where.projectId = projectId;
+  }
 
   if (method) {
     where.method = method;
@@ -19,6 +24,31 @@ function buildWhereClause({ method, path, createdAt }) {
   return where;
 }
 
+async function resolveProjectScope(auth, requestedProjectId) {
+  if (!requestedProjectId) {
+    return auth?.type === "user" ? auth.projectId || undefined : undefined;
+  }
+
+  if (auth?.type !== "user") {
+    return requestedProjectId;
+  }
+
+  const project = await prisma.project.findFirst({
+    where: {
+      id: requestedProjectId,
+      userId: auth.userId,
+    },
+  });
+
+  if (!project) {
+    const err = new Error("Project not found for this account.");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  return project.id;
+}
+
 async function fetchLogs(filters) {
   const where = buildWhereClause(filters);
 
@@ -27,6 +57,26 @@ async function fetchLogs(filters) {
     where,
     orderBy: { createdAt: "desc" },
     take: filters.limit,
+  });
+}
+
+async function createLog(payload) {
+  const { energy, cost, cpuUtil } = energyCalculator(payload.durationMs, payload.cpuUsedMs);
+
+  return prisma.requestLog.create({
+    data: {
+      projectId: payload.projectId,
+      apiKeyId: payload.apiKeyId,
+      method: payload.method,
+      path: payload.path,
+      statusCode: payload.statusCode,
+      durationMs: payload.durationMs,
+      cpuUsedMs: payload.cpuUsedMs,
+      cpuUtil,
+      energyKwh: energy,
+      cost,
+      ...(payload.createdAt ? { createdAt: payload.createdAt } : {}),
+    },
   });
 }
 
@@ -192,7 +242,9 @@ async function fetchSummary(filters) {
 }
 
 module.exports = {
+  createLog,
   fetchLogs,
   fetchStats,
   fetchSummary,
+  resolveProjectScope,
 };

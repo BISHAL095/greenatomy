@@ -2,6 +2,15 @@ const router = require("../../routes/logs");
 const logsController = require("../../controllers/logsController");
 
 describe("logs routes", () => {
+  test("registers POST / route with createLog controller", () => {
+    const routeLayer = router.stack.find(
+      (layer) => layer.route && layer.route.path === "/" && layer.route.methods.post
+    );
+
+    expect(routeLayer).toBeDefined();
+    expect(routeLayer.route.stack[0].handle).toBe(logsController.createLog);
+  });
+
   test("registers GET / route with getLogs controller", () => {
     const routeLayer = router.stack.find(
       (layer) => layer.route && layer.route.path === "/" && layer.route.methods.get

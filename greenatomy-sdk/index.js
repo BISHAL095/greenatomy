@@ -43,6 +43,18 @@ class GreenatomyClient {
     });
   }
 
+  async createLog(payload = {}) {
+    return request({
+      baseUrl: this.baseUrl,
+      token: this.token,
+      apiKey: this.apiKey,
+      timeout: this.timeout,
+      method: "POST",
+      url: "/logs",
+      data: payload,
+    });
+  }
+
   async getStats(params = {}) {
     // Stats and summary reuse the same transport layer and auth configuration.
     return request({

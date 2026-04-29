@@ -135,7 +135,7 @@ function buildLatencySeries(logs) {
   return Object.entries(buckets).map(([bucket, count]) => ({ bucket, count }));
 }
 
-function ChartsPanel({ range, onRangeChange }) {
+function ChartsPanel({ projectId, range, onRangeChange }) {
   const [series, setSeries] = useState([]);
   const [statusSeries, setStatusSeries] = useState([]);
   const [latencySeries, setLatencySeries] = useState([]);
@@ -149,7 +149,7 @@ function ChartsPanel({ range, onRangeChange }) {
 
       try {
         // Charts use the same raw log feed and derive all visual series client-side.
-        const params = buildLogsSearchParams({ range }, { limit: 200 });
+        const params = buildLogsSearchParams({ projectId, range }, { limit: 200 });
 
         const res = await axios.get(buildApiUrl(`/logs?${params.toString()}`), buildApiConfig());
         const logs = Array.isArray(res.data) ? res.data : [];
@@ -170,7 +170,7 @@ function ChartsPanel({ range, onRangeChange }) {
     };
 
     fetchLogs();
-  }, [range]);
+  }, [projectId, range]);
 
   const totals = useMemo(() => {
     // Surface compact totals above the visualizations for quick readouts.

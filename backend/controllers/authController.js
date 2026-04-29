@@ -34,8 +34,19 @@ async function me(req, res) {
   }
 }
 
+async function createProject(req, res) {
+  try {
+    const payload = await authService.createProjectForUser(req.auth.userId, req.body || {});
+    res.status(201).json(payload);
+  } catch (err) {
+    const statusCode = getStatusCode(err);
+    res.status(statusCode).json({ error: statusCode === 500 ? "Unable to create project" : err.message });
+  }
+}
+
 module.exports = {
   register,
   login,
   me,
+  createProject,
 };

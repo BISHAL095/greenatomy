@@ -21,12 +21,12 @@ function LogsTable({ filters }) {
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const { method, path, range, from, to, sort } = filters;
+  const { projectId, method, path, range, from, to, sort } = filters;
 
   useEffect(() => {
     // Reset pagination whenever the visible result set definition changes.
     setPage(1);
-  }, [method, path, range, from, to, sort, pageSize]);
+  }, [projectId, method, path, range, from, to, sort, pageSize]);
 
   useEffect(() => {
     const fetchLogs = async () => {
@@ -35,7 +35,10 @@ function LogsTable({ filters }) {
 
       try {
         // Fetch a capped window once, then paginate and sort in the client for responsiveness.
-        const params = buildLogsSearchParams({ method, path, range, from, to }, { limit: 200 });
+        const params = buildLogsSearchParams(
+          { projectId, method, path, range, from, to },
+          { limit: 200 }
+        );
 
         const res = await axios.get(buildApiUrl(`/logs?${params.toString()}`), buildApiConfig());
         setRawLogs(res.data);
@@ -52,7 +55,7 @@ function LogsTable({ filters }) {
     };
 
     fetchLogs();
-  }, [method, path, range, from, to]);
+  }, [projectId, method, path, range, from, to]);
 
   const sortedLogs = useMemo(() => {
     // Resort in memory so users can toggle chronology without another API call.

@@ -2,7 +2,6 @@ const express = require("express");
 const authRoute = require("./routes/auth");
 const logsRoute = require("./routes/logs");
 const cors = require("cors");
-const loggerMiddleware = require("./middlewares/estimator");
 const authMiddleware = require("./middlewares/auth");
 const { createRateLimitMiddleware } = require("./middlewares/rateLimit");
 const env = require("./config/env");
@@ -22,7 +21,6 @@ app.use(
 );
 
 app.use(express.json());
-app.use(loggerMiddleware);
 app.use("/auth", authRoute);
 
 // Protect telemetry endpoints with token auth.

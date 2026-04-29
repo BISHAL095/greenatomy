@@ -178,6 +178,8 @@ function App() {
   const [authMode, setAuthMode] = useState("login");
   const [sessionToken, setSessionToken] = useState(getStoredAuthToken);
   const [sessionUser, setSessionUser] = useState(null);
+  const [sessionProjects, setSessionProjects] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState("");
   const { currentPage, filters, chartRange } = dashboardState;
   const deferredFilters = useDeferredValue(filters);
 
@@ -197,6 +199,8 @@ function App() {
       .then((res) => {
         if (!cancelled) {
           setSessionUser(res.data.user);
+          setSessionProjects(res.data.projects || []);
+          setSelectedProjectId((current) => current || res.data.projects?.[0]?.id || "");
         }
       })
       .catch(() => {
@@ -204,6 +208,8 @@ function App() {
           clearStoredAuthToken();
           setSessionToken("");
           setSessionUser(null);
+          setSessionProjects([]);
+          setSelectedProjectId("");
         }
       });
 
@@ -272,6 +278,7 @@ function App() {
 
   const overviewFilters = {
     // The overview is intentionally pinned to all-time aggregates.
+    projectId: selectedProjectId,
     method: "",
     path: "",
     range: "all",
@@ -288,12 +295,46 @@ function App() {
     setStoredAuthToken(payload.token);
     setSessionToken(payload.token);
     setSessionUser(payload.user || null);
+    setSessionProjects(payload.project ? [payload.project] : []);
+    setSelectedProjectId(payload.project?.id || "");
   }
 
   function handleLogout() {
     clearStoredAuthToken();
     setSessionToken("");
     setSessionUser(null);
+    setSessionProjects([]);
+    setSelectedProjectId("");
+  }
+
+  async function handleAddProject() {
+    const name = window.prompt("Enter a new project name");
+
+    if (!name || !name.trim()) {
+      return;
+    }
+
+    try {
+      const res = await axios.post(
+        buildApiUrl("/auth/projects"),
+        { name },
+        {
+          headers: {
+            Authorization: `Bearer ${sessionToken}`,
+          },
+        }
+      );
+
+      const nextProject = res.data?.project;
+      if (!nextProject) {
+        return;
+      }
+
+      setSessionProjects((current) => [...current, nextProject]);
+      setSelectedProjectId(nextProject.id);
+    } catch (err) {
+      window.alert(err?.response?.data?.error || "Unable to create project.");
+    }
   }
 
   if (!sessionToken) {
@@ -315,9 +356,33 @@ function App() {
             <p className="brand-title">Carbon-aware backend telemetry</p>
           </div>
           <div className="session-tools">
-            <p className="session-copy">
-              {sessionUser?.email || "Authenticated session"}
-            </p>
+            <div className="project-tools">
+              <p className="session-copy">
+                {sessionUser?.email || "Authenticated session"}
+              </p>
+              <div className="project-controls">
+                <label className="project-picker">
+                  <span>Project</span>
+                  <select
+                    value={selectedProjectId}
+                    onChange={(e) => setSelectedProjectId(e.target.value)}
+                  >
+                    {sessionProjects.length > 0 ? (
+                      sessionProjects.map((project) => (
+                        <option key={project.id} value={project.id}>
+                          {project.name}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="">No projects yet</option>
+                    )}
+                  </select>
+                </label>
+                <button type="button" className="add-project-btn" onClick={handleAddProject}>
+                  Add project
+                </button>
+              </div>
+            </div>
             <button type="button" className="logout-btn" onClick={handleLogout}>
               Logout
             </button>
@@ -442,10 +507,16 @@ function App() {
           </section>
         ) : null}
 
-        {currentPage === "logs" ? <LogsTable filters={deferredFilters} /> : null}
+        {currentPage === "logs" ? (
+          <LogsTable filters={{ ...deferredFilters, projectId: selectedProjectId }} />
+        ) : null}
         {currentPage === "charts" ? (
           <Suspense fallback={<section className="stats-panel"><p className="empty-state">Loading charts...</p></section>}>
-            <ChartsPanel range={chartRange} onRangeChange={handleChartRangeChange} />
+            <ChartsPanel
+              projectId={selectedProjectId}
+              range={chartRange}
+              onRangeChange={handleChartRangeChange}
+            />
           </Suspense>
         ) : null}
       </main>

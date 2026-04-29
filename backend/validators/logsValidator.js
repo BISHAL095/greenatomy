@@ -29,6 +29,43 @@ function normalizePath(path) {
   return normalized || undefined;
 }
 
+function normalizeProjectId(projectId) {
+  if (!projectId) return undefined;
+
+  const normalized = String(projectId).trim();
+  return normalized || undefined;
+}
+
+function normalizeOptionalInteger(value, fieldName) {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+
+  const parsed = Number.parseInt(String(value), 10);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    const err = new Error(`${fieldName} must be a non-negative integer.`);
+    err.statusCode = 400;
+    throw err;
+  }
+
+  return parsed;
+}
+
+function normalizeOptionalNumber(value, fieldName) {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    const err = new Error(`${fieldName} must be a non-negative number.`);
+    err.statusCode = 400;
+    throw err;
+  }
+
+  return parsed;
+}
+
 function normalizeLimit(limit) {
   if (limit === undefined || limit === null || limit === "") {
     // Default to a dashboard-friendly page size when the client omits `limit`.
@@ -121,6 +158,7 @@ function validateLogsQuery(query) {
     limit: normalizeLimit(query.limit),
     method: normalizeMethod(query.method),
     path: normalizePath(query.path),
+    projectId: normalizeProjectId(query.projectId),
     createdAt: timeWindow.createdAt,
     range: timeWindow.range,
   };
@@ -133,12 +171,51 @@ function validateStatsQuery(query) {
   return {
     method: normalizeMethod(query.method),
     path: normalizePath(query.path),
+    projectId: normalizeProjectId(query.projectId),
     createdAt: timeWindow.createdAt,
     range: timeWindow.range,
   };
 }
 
+function validateCreateLogBody(body) {
+  const method = normalizeMethod(body.method);
+  const path = normalizePath(body.path);
+  const durationMs = normalizeOptionalInteger(body.durationMs, "durationMs");
+  const cpuUsedMs = normalizeOptionalNumber(body.cpuUsedMs, "cpuUsedMs");
+  const statusCode = normalizeOptionalInteger(body.statusCode, "statusCode");
+  const createdAt = parseDate(body.createdAt, "createdAt");
+
+  if (!method) {
+    const err = new Error("method is required.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (!path) {
+    const err = new Error("path is required.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (durationMs === undefined) {
+    const err = new Error("durationMs is required.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  return {
+    projectId: normalizeProjectId(body.projectId),
+    method,
+    path,
+    statusCode,
+    durationMs,
+    cpuUsedMs: cpuUsedMs ?? 0,
+    createdAt,
+  };
+}
+
 module.exports = {
+  validateCreateLogBody,
   validateLogsQuery,
   validateStatsQuery,
 };

@@ -128,6 +128,58 @@
   gap: 0.9rem;
 }
 
+.project-tools {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.project-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.project-picker {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.project-picker span {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: #f2b051;
+}
+
+.project-picker select {
+  border: 1px solid rgba(233, 241, 237, 0.14);
+  background: rgba(245, 247, 246, 0.06);
+  color: #edf4f0;
+  border-radius: 12px;
+  padding: 0.55rem 0.8rem;
+  font: inherit;
+}
+
+.project-picker select option {
+  color: #102119;
+}
+
+.add-project-btn {
+  border: 1px solid rgba(143, 240, 189, 0.32);
+  background: linear-gradient(180deg, rgba(143, 240, 189, 0.22), rgba(74, 167, 120, 0.14));
+  color: #e9fff3;
+  border-radius: 12px;
+  padding: 0.6rem 0.95rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.add-project-btn:hover {
+  border-color: rgba(143, 240, 189, 0.58);
+}
+
 .session-copy {
   margin: 0;
   color: rgba(228, 237, 232, 0.68);
@@ -627,6 +679,10 @@
   .session-tools {
     width: 100%;
     justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .project-controls {
     flex-wrap: wrap;
   }
 

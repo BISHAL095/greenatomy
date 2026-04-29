@@ -103,6 +103,10 @@ function Stats({ filters }) {
         const params = new URLSearchParams();
         const { from, to, windowMs } = getWindowRange(filters);
 
+        if (filters.projectId) {
+          params.set("projectId", filters.projectId);
+        }
+
         if (filters.method) {
           params.set("method", filters.method);
         }
@@ -191,6 +195,7 @@ function Stats({ filters }) {
           const prevFrom = new Date(prevTo.getTime() - windowMs);
 
           const prevParams = new URLSearchParams();
+          if (filters.projectId) prevParams.set("projectId", filters.projectId);
           if (filters.method) prevParams.set("method", filters.method);
           if (filters.path) prevParams.set("path", filters.path);
           prevParams.set("from", prevFrom.toISOString());

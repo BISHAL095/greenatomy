@@ -40,6 +40,10 @@ export function buildLogsSearchParams(filters = {}, options = {}) {
   const params = new URLSearchParams();
   const { from, to } = getWindowRange(filters);
 
+  if (filters.projectId) {
+    params.set("projectId", filters.projectId);
+  }
+
   if (filters.method) {
     params.set("method", filters.method);
   }
