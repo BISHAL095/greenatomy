@@ -42,6 +42,7 @@ You can also override the default request timeout of `5000` ms with `timeout`.
 Current SDK scope:
 
 - `getLogs()`
+- `createLog()`
 - `getStats()`
 - `getSummary()`
 
@@ -57,6 +58,35 @@ const logs = await client.getLogs({
   limit: 20,
 });
 ```
+
+### `createLog(payload)`
+
+Creates a telemetry log via `POST /logs`.
+
+```js
+const createdLog = await client.createLog({
+  method: "GET",
+  path: "/api/users",
+  statusCode: 200,
+  durationMs: 142,
+  cpuUsedMs: 38.5,
+  cpuUtil: 24.2,
+  energyKwh: 0.000214,
+  cost: 0.001245,
+});
+```
+
+Common payload fields:
+
+- `method` (required)
+- `path` (required)
+- `statusCode` (optional)
+- `durationMs` (required)
+- `cpuUsedMs` (required)
+- `cpuUtil` (required)
+- `energyKwh` (required)
+- `cost` (required)
+- `projectId` (optional, depending on auth scope)
 
 ### `getStats(params?)`
 
@@ -110,4 +140,6 @@ Possible `error.code` values:
 - Either `token` or `apiKey` is required.
 - `timeout` is optional and defaults to `5000` ms.
 - The client removes trailing slashes from `baseUrl`.
-- The SDK currently supports logs, stats, and summary endpoints.
+- The SDK currently supports logs, telemetry creation, stats, and summary endpoints.
+- `token` is ideal for authenticated dashboard/user access.
+- `apiKey` is ideal for project-level telemetry ingestion.
