@@ -38,7 +38,27 @@ beforeEach(() => {
             id: "user-1",
             email: "test@example.com",
           },
-          projects: [],
+          projects: [
+            {
+              id: "project-1",
+              name: "Default project",
+            },
+          ],
+        },
+      });
+    }
+
+    if (url.includes("/auth/projects/project-1/keys")) {
+      return Promise.resolve({
+        data: {
+          apiKeys: [
+            {
+              id: "key-1",
+              label: "Production SDK key",
+              preview: "ga_live_****A1B2",
+              revokedAt: null,
+            },
+          ],
         },
       });
     }
@@ -162,5 +182,15 @@ describe("Dashboard UI", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Charts" }));
     expect(await screen.findByLabelText("Window")).toHaveValue("24h");
+  });
+
+  test("shows API keys on the dedicated keys page", async () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Keys" }));
+
+    expect(await screen.findByRole("heading", { name: "Project API keys" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create API key" })).toBeInTheDocument();
+    expect(await screen.findByText("Production SDK key")).toBeInTheDocument();
   });
 });

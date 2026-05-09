@@ -1,4 +1,4 @@
-import { Suspense, lazy, useDeferredValue, useEffect, useState } from "react";
+import { Suspense, lazy, useDeferredValue, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import Stats from "./components/Stats";
 import LogsTable from "./components/LogsTable";
@@ -13,10 +13,72 @@ import "./App.css";
 // Defer the chart bundle until the charts view is actually opened.
 const ChartsPanel = lazy(() => import("./components/ChartsPanel"));
 
-const VALID_PAGES = new Set(["overview", "logs", "charts"]);
+const VALID_PAGES = new Set(["overview", "logs", "charts", "keys"]);
 const VALID_RANGES = new Set(["24h", "7d", "30d", "all", "custom"]);
 const VALID_SORTS = new Set(["asc", "desc"]);
 const VALID_CHART_RANGES = new Set(["24h", "7d", "30d"]);
+const NAV_ITEMS = [
+  { id: "overview", label: "Overview", icon: "overview" },
+  { id: "logs", label: "Logs", icon: "logs" },
+  { id: "charts", label: "Charts", icon: "charts" },
+  { id: "keys", label: "Keys", icon: "keys" },
+];
+
+function NavIcon({ kind }) {
+  const common = {
+    width: 18,
+    height: 18,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "1.85",
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    "aria-hidden": "true",
+  };
+
+  switch (kind) {
+    case "overview":
+      return (
+        <svg {...common}>
+          <path d="M4 13.5 12 5l8 8.5" />
+          <path d="M6.5 11.5V20h11v-8.5" />
+          <path d="M10 20v-5h4v5" />
+        </svg>
+      );
+    case "logs":
+      return (
+        <svg {...common}>
+          <path d="M7 6h10" />
+          <path d="M7 12h10" />
+          <path d="M7 18h6" />
+          <circle cx="5" cy="6" r="1" fill="currentColor" stroke="none" />
+          <circle cx="5" cy="12" r="1" fill="currentColor" stroke="none" />
+          <circle cx="5" cy="18" r="1" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    case "charts":
+      return (
+        <svg {...common}>
+          <path d="M4 19h16" />
+          <path d="M7 16V9" />
+          <path d="M12 16V5" />
+          <path d="M17 16v-7" />
+        </svg>
+      );
+    case "keys":
+      return (
+        <svg {...common}>
+          <circle cx="8.5" cy="12" r="3.5" />
+          <path d="M12 12h8" />
+          <path d="M17 12v3" />
+          <path d="M20 12v2" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
 
 function readDashboardState() {
   // Treat the URL as the persisted dashboard state so refresh/share works without extra storage.
@@ -185,6 +247,10 @@ function App() {
   const [apiKeysError, setApiKeysError] = useState("");
   const [newApiKeyLabel, setNewApiKeyLabel] = useState("");
   const [freshApiKey, setFreshApiKey] = useState("");
+  const [showProjectForm, setShowProjectForm] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [projectFormLoading, setProjectFormLoading] = useState(false);
+  const [projectFormError, setProjectFormError] = useState("");
   const { currentPage, filters, chartRange } = dashboardState;
   const deferredFilters = useDeferredValue(filters);
 
@@ -316,16 +382,24 @@ function App() {
     }));
   }
 
-  const overviewFilters = {
-    // The overview is intentionally pinned to all-time aggregates.
-    projectId: selectedProjectId,
-    method: "",
-    path: "",
-    range: "all",
-    from: "",
-    to: "",
-    sort: "desc",
-  };
+  const overviewFilters = useMemo(
+    () => ({
+      // The overview is intentionally pinned to all-time aggregates.
+      projectId: selectedProjectId,
+      method: "",
+      path: "",
+      range: "all",
+      from: "",
+      to: "",
+      sort: "desc",
+    }),
+    [selectedProjectId]
+  );
+
+  const currentProject = useMemo(
+    () => sessionProjects.find((project) => project.id === selectedProjectId) || null,
+    [sessionProjects, selectedProjectId]
+  );
 
   function handleAuthenticated(payload) {
     if (!payload?.token) {
@@ -341,6 +415,9 @@ function App() {
     setApiKeysError("");
     setApiKeysLoading(Boolean(payload.project?.id));
     setFreshApiKey("");
+    setShowProjectForm(false);
+    setNewProjectName("");
+    setProjectFormError("");
   }
 
   function handleLogout() {
@@ -353,14 +430,22 @@ function App() {
     setApiKeysError("");
     setApiKeysLoading(false);
     setFreshApiKey("");
+    setShowProjectForm(false);
+    setNewProjectName("");
+    setProjectFormError("");
   }
 
-  async function handleAddProject() {
-    const name = window.prompt("Enter a new project name");
+  async function handleAddProject(event) {
+    event.preventDefault();
+    const name = newProjectName.trim();
 
-    if (!name || !name.trim()) {
+    if (!name) {
+      setProjectFormError("Project name is required.");
       return;
     }
+
+    setProjectFormLoading(true);
+    setProjectFormError("");
 
     try {
       const res = await axios.post(
@@ -384,8 +469,13 @@ function App() {
       setApiKeysError("");
       setApiKeysLoading(true);
       setFreshApiKey("");
+      setShowProjectForm(false);
+      setNewProjectName("");
+      setProjectFormError("");
     } catch (err) {
-      window.alert(err?.response?.data?.error || "Unable to create project.");
+      setProjectFormError(err?.response?.data?.error || "Unable to create project.");
+    } finally {
+      setProjectFormLoading(false);
     }
   }
 
@@ -450,77 +540,117 @@ function App() {
 
   return (
     <div className="app-shell">
-      <header className="site-navbar">
-        <div className="navbar-top">
+      <div className="dashboard-shell">
+        <aside className="dashboard-sidebar">
           <div className="site-brand">
             <p className="eyebrow">Green-Ops Monitor</p>
             <p className="brand-title">Carbon-aware backend telemetry</p>
           </div>
-          <div className="session-tools">
-            <div className="project-tools">
-              <p className="session-copy">
-                {sessionUser?.email || "Authenticated session"}
-              </p>
-              <div className="project-controls">
-                <label className="project-picker">
-                  <span>Project</span>
-                  <select
-                    value={selectedProjectId}
-                    onChange={(e) => {
-                      setSelectedProjectId(e.target.value);
-                      setApiKeys([]);
-                      setApiKeysError("");
-                      setApiKeysLoading(Boolean(e.target.value));
-                      setFreshApiKey("");
+
+          <nav className="page-nav" aria-label="Dashboard pages">
+            {NAV_ITEMS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={`page-link sidebar-link ${currentPage === item.id ? "active" : ""}`}
+                onClick={() => setCurrentPage(item.id)}
+              >
+                <span className="page-link-icon">
+                  <NavIcon kind={item.icon} />
+                </span>
+                <span>{item.label}</span>
+              </button>
+            ))}
+          </nav>
+        </aside>
+
+        <div className="dashboard-main">
+          <header className="site-navbar">
+            <div className="navbar-top">
+              <div className="header-panel project-panel">
+                <div className="project-heading">
+                  <p className="project-title">Project</p>
+                  <p className="project-name">{currentProject?.name || "No project selected"}</p>
+                </div>
+                <div className="project-controls">
+                  <label className="project-picker">
+                    <span>Choose project</span>
+                    <select
+                      value={selectedProjectId}
+                      onChange={(e) => {
+                        setSelectedProjectId(e.target.value);
+                        setApiKeys([]);
+                        setApiKeysError("");
+                        setApiKeysLoading(Boolean(e.target.value));
+                        setFreshApiKey("");
+                      }}
+                    >
+                      {sessionProjects.length > 0 ? (
+                        sessionProjects.map((project) => (
+                          <option key={project.id} value={project.id}>
+                            {project.name}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="">No projects yet</option>
+                      )}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    className={`add-project-btn ${showProjectForm ? "active" : ""}`}
+                    onClick={() => {
+                      setShowProjectForm((current) => !current);
+                      setNewProjectName("");
+                      setProjectFormError("");
                     }}
                   >
-                    {sessionProjects.length > 0 ? (
-                      sessionProjects.map((project) => (
-                        <option key={project.id} value={project.id}>
-                          {project.name}
-                        </option>
-                      ))
-                    ) : (
-                      <option value="">No projects yet</option>
-                    )}
-                  </select>
-                </label>
-                <button type="button" className="add-project-btn" onClick={handleAddProject}>
-                  Add project
+                    {showProjectForm ? "Close" : "Add project"}
+                  </button>
+                </div>
+              </div>
+              <div className="header-panel account-panel">
+                <p className="session-copy">
+                  {sessionUser?.email || "Authenticated session"}
+                </p>
+                <button type="button" className="logout-btn" onClick={handleLogout}>
+                  Logout
                 </button>
               </div>
             </div>
-            <button type="button" className="logout-btn" onClick={handleLogout}>
-              Logout
-            </button>
-          </div>
-        </div>
-        <nav className="page-nav navbar-tabs" aria-label="Dashboard pages">
-          <button
-            type="button"
-            className={`page-link ${currentPage === "overview" ? "active" : ""}`}
-            onClick={() => setCurrentPage("overview")}
-          >
-            Overview
-          </button>
-          <button
-            type="button"
-            className={`page-link ${currentPage === "logs" ? "active" : ""}`}
-            onClick={() => setCurrentPage("logs")}
-          >
-            Logs
-          </button>
-          <button
-            type="button"
-            className={`page-link ${currentPage === "charts" ? "active" : ""}`}
-            onClick={() => setCurrentPage("charts")}
-          >
-            Charts
-          </button>
-        </nav>
-      </header>
+            {showProjectForm ? (
+              <form className="project-inline-form" onSubmit={handleAddProject}>
+                <label className="field project-inline-field">
+                  <span>New project</span>
+                  <input
+                    value={newProjectName}
+                    onChange={(e) => setNewProjectName(e.target.value)}
+                    placeholder="Production API"
+                    autoFocus
+                  />
+                </label>
+                <div className="project-inline-actions">
+                  <button type="submit" className="add-project-btn" disabled={projectFormLoading}>
+                    {projectFormLoading ? "Creating..." : "Create project"}
+                  </button>
+                  <button
+                    type="button"
+                    className="project-cancel-btn"
+                    onClick={() => {
+                      setShowProjectForm(false);
+                      setNewProjectName("");
+                      setProjectFormError("");
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+                {projectFormError ? <p className="status-banner error">{projectFormError}</p> : null}
+              </form>
+            ) : null}
+          </header>
 
-      <main className="dashboard">
+          <main className="dashboard">
         {currentPage === "overview" ? (
           <>
             <section className="hero-panel">
@@ -534,52 +664,9 @@ function App() {
               </div>
               <div className="hero-card">
                 <p className="hero-card-label">Project access</p>
-                <div className="api-key-creator">
-                  <label className="field">
-                    <span>New API key label</span>
-                    <input
-                      value={newApiKeyLabel}
-                      onChange={(e) => setNewApiKeyLabel(e.target.value)}
-                      placeholder="Production SDK key"
-                    />
-                  </label>
-                  <button type="button" className="add-project-btn" onClick={handleCreateApiKey}>
-                    Create API key
-                  </button>
-                </div>
-                {freshApiKey ? (
-                  <div className="status-banner success">
-                    Save this key now: <code>{freshApiKey}</code>
-                  </div>
-                ) : null}
-                {apiKeysError ? <p className="status-banner error">{apiKeysError}</p> : null}
-                <div className="api-key-list">
-                  {apiKeysLoading ? (
-                    <p className="insight-copy">Loading API keys...</p>
-                  ) : apiKeys.length > 0 ? (
-                    apiKeys.map((apiKey) => (
-                      <article className="api-key-item" key={apiKey.id}>
-                        <div>
-                          <strong>{apiKey.label}</strong>
-                          <p className="insight-copy">
-                            {apiKey.preview} · {apiKey.revokedAt ? "Revoked" : "Active"}
-                          </p>
-                        </div>
-                        {!apiKey.revokedAt ? (
-                          <button
-                            type="button"
-                            className="revoke-key-btn"
-                            onClick={() => handleRevokeApiKey(apiKey.id)}
-                          >
-                            Revoke
-                          </button>
-                        ) : null}
-                      </article>
-                    ))
-                  ) : (
-                    <p className="insight-copy">No API keys yet for this project.</p>
-                  )}
-                </div>
+                <p className="hero-text">
+                  Switch projects from the header, then open the Keys page to generate SDK credentials and revoke old ones.
+                </p>
               </div>
             </section>
             <Stats filters={overviewFilters} />
@@ -675,7 +762,78 @@ function App() {
             />
           </Suspense>
         ) : null}
-      </main>
+        {currentPage === "keys" ? (
+          <section className="stats-panel">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Keys</p>
+                <h2>Project API keys</h2>
+              </div>
+              <p className="section-copy">
+                Create ingestion keys for the selected project and revoke credentials that should no longer submit telemetry.
+              </p>
+            </div>
+
+            <section className="keys-layout">
+              <article className="insight-card">
+                <p className="stat-label">Create new key</p>
+                <div className="api-key-creator">
+                  <label className="field">
+                    <span>Key label</span>
+                    <input
+                      value={newApiKeyLabel}
+                      onChange={(e) => setNewApiKeyLabel(e.target.value)}
+                      placeholder="Production SDK key"
+                    />
+                  </label>
+                  <button type="button" className="add-project-btn" onClick={handleCreateApiKey}>
+                    Create API key
+                  </button>
+                </div>
+                {freshApiKey ? (
+                  <div className="status-banner success">
+                    Save this key now: <code>{freshApiKey}</code>
+                  </div>
+                ) : null}
+                {apiKeysError ? <p className="status-banner error">{apiKeysError}</p> : null}
+              </article>
+
+              <article className="insight-card">
+                <p className="stat-label">Existing keys</p>
+                <div className="api-key-list">
+                  {apiKeysLoading ? (
+                    <p className="insight-copy">Loading API keys...</p>
+                  ) : apiKeys.length > 0 ? (
+                    apiKeys.map((apiKey) => (
+                      <article className="api-key-item" key={apiKey.id}>
+                        <div>
+                          <strong>{apiKey.label}</strong>
+                          <p className="insight-copy">
+                            {apiKey.preview} · {apiKey.revokedAt ? "Revoked" : "Active"}
+                          </p>
+                        </div>
+                        {!apiKey.revokedAt ? (
+                          <button
+                            type="button"
+                            className="revoke-key-btn"
+                            onClick={() => handleRevokeApiKey(apiKey.id)}
+                          >
+                            Revoke
+                          </button>
+                        ) : null}
+                      </article>
+                    ))
+                  ) : (
+                    <p className="insight-copy">No API keys yet for this project.</p>
+                  )}
+                </div>
+              </article>
+            </section>
+          </section>
+        ) : null}
+          </main>
+        </div>
+      </div>
     </div>
   );
 }
