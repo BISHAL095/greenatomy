@@ -44,9 +44,50 @@ async function createProject(req, res) {
   }
 }
 
+async function listProjectKeys(req, res) {
+  try {
+    const payload = await authService.listProjectApiKeys(req.auth.userId, req.params.projectId);
+    res.json(payload);
+  } catch (err) {
+    const statusCode = getStatusCode(err);
+    res.status(statusCode).json({ error: statusCode === 500 ? "Unable to load API keys" : err.message });
+  }
+}
+
+async function createProjectKey(req, res) {
+  try {
+    const payload = await authService.createProjectApiKey(
+      req.auth.userId,
+      req.params.projectId,
+      req.body || {}
+    );
+    res.status(201).json(payload);
+  } catch (err) {
+    const statusCode = getStatusCode(err);
+    res.status(statusCode).json({ error: statusCode === 500 ? "Unable to create API key" : err.message });
+  }
+}
+
+async function revokeProjectKey(req, res) {
+  try {
+    const payload = await authService.revokeProjectApiKey(
+      req.auth.userId,
+      req.params.projectId,
+      req.params.keyId
+    );
+    res.json(payload);
+  } catch (err) {
+    const statusCode = getStatusCode(err);
+    res.status(statusCode).json({ error: statusCode === 500 ? "Unable to revoke API key" : err.message });
+  }
+}
+
 module.exports = {
   register,
   login,
   me,
   createProject,
+  listProjectKeys,
+  createProjectKey,
+  revokeProjectKey,
 };

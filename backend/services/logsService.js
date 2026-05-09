@@ -25,6 +25,16 @@ function buildWhereClause({ method, path, createdAt, projectId }) {
 }
 
 async function resolveProjectScope(auth, requestedProjectId) {
+  if (auth?.type === "apiKey") {
+    if (requestedProjectId && requestedProjectId !== auth.projectId) {
+      const err = new Error("API key cannot access a different project.");
+      err.statusCode = 403;
+      throw err;
+    }
+
+    return auth.projectId;
+  }
+
   if (!requestedProjectId) {
     return auth?.type === "user" ? auth.projectId || undefined : undefined;
   }

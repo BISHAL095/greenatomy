@@ -1,5 +1,6 @@
 const prisma = require("../lib/prisma");
 const { createAuthToken } = require("../utils/authTokens");
+const { generateApiKey, hashApiKey, maskApiKey } = require("../utils/apiKeys");
 const { hashPassword, verifyPassword } = require("../utils/passwords");
 
 function normalizeEmail(email) {
@@ -47,6 +48,27 @@ function serializeAuthPayload(user, project) {
         }
       : null,
   };
+}
+
+function buildStoredKeyPreview(apiKeyId) {
+  return `stored:${String(apiKeyId).slice(0, 6)}`;
+}
+
+async function requireOwnedProject(userId, projectId) {
+  const project = await prisma.project.findFirst({
+    where: {
+      id: projectId,
+      userId,
+    },
+  });
+
+  if (!project) {
+    const err = new Error("Project not found for this account.");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  return project;
 }
 
 async function registerUser({ email, password, projectName }) {
@@ -176,9 +198,89 @@ async function createProjectForUser(userId, { name }) {
   }
 }
 
+async function listProjectApiKeys(userId, projectId) {
+  await requireOwnedProject(userId, projectId);
+
+  const apiKeys = await prisma.apiKey.findMany({
+    where: { projectId },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return {
+    apiKeys: apiKeys.map((apiKey) => ({
+      id: apiKey.id,
+      label: apiKey.label || "Unnamed key",
+      createdAt: apiKey.createdAt,
+      revokedAt: apiKey.revokedAt,
+      preview: buildStoredKeyPreview(apiKey.id),
+    })),
+  };
+}
+
+async function createProjectApiKey(userId, projectId, { label }) {
+  await requireOwnedProject(userId, projectId);
+
+  const rawKey = generateApiKey();
+  const apiKey = await prisma.apiKey.create({
+    data: {
+      projectId,
+      keyHash: hashApiKey(rawKey),
+      label: String(label || "").trim() || "SDK key",
+    },
+  });
+
+  return {
+    apiKey: {
+      id: apiKey.id,
+      label: apiKey.label || "SDK key",
+      createdAt: apiKey.createdAt,
+      revokedAt: apiKey.revokedAt,
+      preview: maskApiKey(rawKey),
+    },
+    rawKey,
+  };
+}
+
+async function revokeProjectApiKey(userId, projectId, keyId) {
+  await requireOwnedProject(userId, projectId);
+
+  const apiKey = await prisma.apiKey.findFirst({
+    where: {
+      id: keyId,
+      projectId,
+    },
+  });
+
+  if (!apiKey) {
+    const err = new Error("API key not found.");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const revoked = await prisma.apiKey.update({
+    where: { id: apiKey.id },
+    data: {
+      revokedAt: apiKey.revokedAt || new Date(),
+    },
+  });
+
+  return {
+    apiKey: {
+      id: revoked.id,
+      label: revoked.label || "Unnamed key",
+      createdAt: revoked.createdAt,
+      revokedAt: revoked.revokedAt,
+      preview: buildStoredKeyPreview(revoked.id),
+    },
+  };
+}
+
 module.exports = {
+  createProjectApiKey,
   registerUser,
   loginUser,
   getUserProfile,
   createProjectForUser,
+  listProjectApiKeys,
+  revokeProjectApiKey,
 };

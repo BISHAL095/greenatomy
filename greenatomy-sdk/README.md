@@ -27,15 +27,15 @@ const GreenatomyClient = require("greenatomy-sdk");
 
 const client = new GreenatomyClient({
   baseUrl: "http://localhost:5000",
-  token: "your-auth-token",
+  apiKey: "ga_live_your_project_key",
   timeout: 8000,
 });
 ```
 
 You can authenticate with either:
 
-- `token`, sent as `Authorization: Bearer <token>`
-- `apiKey`, sent as `x-api-key`
+- `apiKey`, sent as `x-api-key`, recommended for project telemetry ingestion
+- `token`, sent as `Authorization: Bearer <token>`, useful for dashboard or user-session reads
 
 You can also override the default request timeout of `5000` ms with `timeout`.
 
@@ -70,9 +70,6 @@ const createdLog = await client.createLog({
   statusCode: 200,
   durationMs: 142,
   cpuUsedMs: 38.5,
-  cpuUtil: 24.2,
-  energyKwh: 0.000214,
-  cost: 0.001245,
 });
 ```
 
@@ -82,11 +79,10 @@ Common payload fields:
 - `path` (required)
 - `statusCode` (optional)
 - `durationMs` (required)
-- `cpuUsedMs` (required)
-- `cpuUtil` (required)
-- `energyKwh` (required)
-- `cost` (required)
-- `projectId` (optional, depending on auth scope)
+- `cpuUsedMs` (optional, defaults to `0`)
+- `createdAt` (optional)
+
+`energyKwh`, `cost`, and `cpuUtil` are calculated by the backend collector and returned in the stored log.
 
 ### `getStats(params?)`
 
@@ -143,3 +139,11 @@ Possible `error.code` values:
 - The SDK currently supports logs, telemetry creation, stats, and summary endpoints.
 - `token` is ideal for authenticated dashboard/user access.
 - `apiKey` is ideal for project-level telemetry ingestion.
+
+## Recommended Onboarding
+
+1. Register in the hosted dashboard.
+2. Create a project.
+3. Generate an API key for that project.
+4. Save the raw API key when it is shown. It is only displayed once.
+5. Configure the SDK with that API key and your hosted `baseUrl`.

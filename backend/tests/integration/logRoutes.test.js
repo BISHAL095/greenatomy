@@ -8,7 +8,7 @@ describe("logs routes", () => {
     );
 
     expect(routeLayer).toBeDefined();
-    expect(routeLayer.route.stack[0].handle).toBe(logsController.createLog);
+    expect(routeLayer.route.stack.at(-1).handle).toBe(logsController.createLog);
   });
 
   test("registers GET / route with getLogs controller", () => {

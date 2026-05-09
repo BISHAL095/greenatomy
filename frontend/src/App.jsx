@@ -180,6 +180,11 @@ function App() {
   const [sessionUser, setSessionUser] = useState(null);
   const [sessionProjects, setSessionProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [apiKeys, setApiKeys] = useState([]);
+  const [apiKeysLoading, setApiKeysLoading] = useState(false);
+  const [apiKeysError, setApiKeysError] = useState("");
+  const [newApiKeyLabel, setNewApiKeyLabel] = useState("");
+  const [freshApiKey, setFreshApiKey] = useState("");
   const { currentPage, filters, chartRange } = dashboardState;
   const deferredFilters = useDeferredValue(filters);
 
@@ -217,6 +222,41 @@ function App() {
       cancelled = true;
     };
   }, [sessionToken]);
+
+  useEffect(() => {
+    if (!sessionToken || !selectedProjectId) {
+      return;
+    }
+
+    let cancelled = false;
+
+    axios
+      .get(buildApiUrl(`/auth/projects/${selectedProjectId}/keys`), {
+        headers: {
+          Authorization: `Bearer ${sessionToken}`,
+        },
+      })
+      .then((res) => {
+        if (!cancelled) {
+          setApiKeys(res.data.apiKeys || []);
+          setApiKeysError("");
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setApiKeysError(err?.response?.data?.error || "Unable to load API keys.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setApiKeysLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionToken, selectedProjectId]);
 
   useEffect(() => {
     // Mirror browser back/forward navigation into component state.
@@ -297,6 +337,10 @@ function App() {
     setSessionUser(payload.user || null);
     setSessionProjects(payload.project ? [payload.project] : []);
     setSelectedProjectId(payload.project?.id || "");
+    setApiKeys([]);
+    setApiKeysError("");
+    setApiKeysLoading(Boolean(payload.project?.id));
+    setFreshApiKey("");
   }
 
   function handleLogout() {
@@ -305,6 +349,10 @@ function App() {
     setSessionUser(null);
     setSessionProjects([]);
     setSelectedProjectId("");
+    setApiKeys([]);
+    setApiKeysError("");
+    setApiKeysLoading(false);
+    setFreshApiKey("");
   }
 
   async function handleAddProject() {
@@ -332,8 +380,61 @@ function App() {
 
       setSessionProjects((current) => [...current, nextProject]);
       setSelectedProjectId(nextProject.id);
+      setApiKeys([]);
+      setApiKeysError("");
+      setApiKeysLoading(true);
+      setFreshApiKey("");
     } catch (err) {
       window.alert(err?.response?.data?.error || "Unable to create project.");
+    }
+  }
+
+  async function handleCreateApiKey() {
+    if (!selectedProjectId) {
+      window.alert("Select a project first.");
+      return;
+    }
+
+    try {
+      const res = await axios.post(
+        buildApiUrl(`/auth/projects/${selectedProjectId}/keys`),
+        { label: newApiKeyLabel },
+        {
+          headers: {
+            Authorization: `Bearer ${sessionToken}`,
+          },
+        }
+      );
+
+      setApiKeys((current) => [res.data.apiKey, ...current]);
+      setFreshApiKey(res.data.rawKey || "");
+      setNewApiKeyLabel("");
+    } catch (err) {
+      window.alert(err?.response?.data?.error || "Unable to create API key.");
+    }
+  }
+
+  async function handleRevokeApiKey(keyId) {
+    if (!selectedProjectId) {
+      return;
+    }
+
+    try {
+      const res = await axios.post(
+        buildApiUrl(`/auth/projects/${selectedProjectId}/keys/${keyId}/revoke`),
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${sessionToken}`,
+          },
+        }
+      );
+
+      setApiKeys((current) =>
+        current.map((apiKey) => (apiKey.id === keyId ? res.data.apiKey : apiKey))
+      );
+    } catch (err) {
+      window.alert(err?.response?.data?.error || "Unable to revoke API key.");
     }
   }
 
@@ -365,7 +466,13 @@ function App() {
                   <span>Project</span>
                   <select
                     value={selectedProjectId}
-                    onChange={(e) => setSelectedProjectId(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedProjectId(e.target.value);
+                      setApiKeys([]);
+                      setApiKeysError("");
+                      setApiKeysLoading(Boolean(e.target.value));
+                      setFreshApiKey("");
+                    }}
                   >
                     {sessionProjects.length > 0 ? (
                       sessionProjects.map((project) => (
@@ -424,6 +531,55 @@ function App() {
                   All-time platform metrics and key operational insights.
                   Navigate to Logs for route-level investigation and filtering.
                 </p>
+              </div>
+              <div className="hero-card">
+                <p className="hero-card-label">Project access</p>
+                <div className="api-key-creator">
+                  <label className="field">
+                    <span>New API key label</span>
+                    <input
+                      value={newApiKeyLabel}
+                      onChange={(e) => setNewApiKeyLabel(e.target.value)}
+                      placeholder="Production SDK key"
+                    />
+                  </label>
+                  <button type="button" className="add-project-btn" onClick={handleCreateApiKey}>
+                    Create API key
+                  </button>
+                </div>
+                {freshApiKey ? (
+                  <div className="status-banner success">
+                    Save this key now: <code>{freshApiKey}</code>
+                  </div>
+                ) : null}
+                {apiKeysError ? <p className="status-banner error">{apiKeysError}</p> : null}
+                <div className="api-key-list">
+                  {apiKeysLoading ? (
+                    <p className="insight-copy">Loading API keys...</p>
+                  ) : apiKeys.length > 0 ? (
+                    apiKeys.map((apiKey) => (
+                      <article className="api-key-item" key={apiKey.id}>
+                        <div>
+                          <strong>{apiKey.label}</strong>
+                          <p className="insight-copy">
+                            {apiKey.preview} · {apiKey.revokedAt ? "Revoked" : "Active"}
+                          </p>
+                        </div>
+                        {!apiKey.revokedAt ? (
+                          <button
+                            type="button"
+                            className="revoke-key-btn"
+                            onClick={() => handleRevokeApiKey(apiKey.id)}
+                          >
+                            Revoke
+                          </button>
+                        ) : null}
+                      </article>
+                    ))
+                  ) : (
+                    <p className="insight-copy">No API keys yet for this project.</p>
+                  )}
+                </div>
               </div>
             </section>
             <Stats filters={overviewFilters} />

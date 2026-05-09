@@ -29,11 +29,13 @@ async function buildScopedProjectId(req, requestedProjectId) {
 async function createLog(req, res) {
   try {
     const payload = validateCreateLogBody(req.body || {});
-    const projectId = await buildScopedProjectId(req, payload.projectId);
+    const projectId = req.auth?.type === "apiKey"
+      ? req.auth.projectId
+      : await buildScopedProjectId(req, payload.projectId);
     const log = await logsService.createLog({
       ...payload,
       projectId,
-      apiKeyId: null,
+      apiKeyId: req.auth?.type === "apiKey" ? req.auth.apiKeyId : null,
     });
     res.status(201).json(log);
   } catch (err) {
