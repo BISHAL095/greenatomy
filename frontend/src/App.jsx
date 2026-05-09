@@ -245,7 +245,6 @@ function App() {
   const [apiKeys, setApiKeys] = useState([]);
   const [apiKeysLoading, setApiKeysLoading] = useState(false);
   const [apiKeysError, setApiKeysError] = useState("");
-  const [newApiKeyLabel, setNewApiKeyLabel] = useState("");
   const [freshApiKey, setFreshApiKey] = useState("");
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
@@ -488,7 +487,7 @@ function App() {
     try {
       const res = await axios.post(
         buildApiUrl(`/auth/projects/${selectedProjectId}/keys`),
-        { label: newApiKeyLabel },
+        {},
         {
           headers: {
             Authorization: `Bearer ${sessionToken}`,
@@ -498,7 +497,6 @@ function App() {
 
       setApiKeys((current) => [res.data.apiKey, ...current]);
       setFreshApiKey(res.data.rawKey || "");
-      setNewApiKeyLabel("");
     } catch (err) {
       window.alert(err?.response?.data?.error || "Unable to create API key.");
     }
@@ -764,70 +762,69 @@ function App() {
         ) : null}
         {currentPage === "keys" ? (
           <section className="stats-panel">
-            <div className="section-heading">
+            <div className="section-heading keys-heading">
               <div>
                 <p className="eyebrow">Keys</p>
                 <h2>Project API keys</h2>
               </div>
-              <p className="section-copy">
-                Create ingestion keys for the selected project and revoke credentials that should no longer submit telemetry.
-              </p>
+              <button type="button" className="add-project-btn" onClick={handleCreateApiKey}>
+                Create API key
+              </button>
             </div>
 
-            <section className="keys-layout">
-              <article className="insight-card">
-                <p className="stat-label">Create new key</p>
-                <div className="api-key-creator">
-                  <label className="field">
-                    <span>Key label</span>
-                    <input
-                      value={newApiKeyLabel}
-                      onChange={(e) => setNewApiKeyLabel(e.target.value)}
-                      placeholder="Production SDK key"
-                    />
-                  </label>
-                  <button type="button" className="add-project-btn" onClick={handleCreateApiKey}>
-                    Create API key
-                  </button>
-                </div>
-                {freshApiKey ? (
-                  <div className="status-banner success">
-                    Save this key now: <code>{freshApiKey}</code>
-                  </div>
-                ) : null}
-                {apiKeysError ? <p className="status-banner error">{apiKeysError}</p> : null}
-              </article>
+            {freshApiKey ? (
+              <div className="status-banner success">
+                Save this key now: <code>{freshApiKey}</code>
+              </div>
+            ) : null}
+            {apiKeysError ? <p className="status-banner error">{apiKeysError}</p> : null}
 
-              <article className="insight-card">
-                <p className="stat-label">Existing keys</p>
+            <section className="api-key-table-shell">
+              <div className="api-key-table-head">
+                <span>Name</span>
+                <span>Created</span>
+                <span>Status</span>
+                <span>Delete</span>
+              </div>
+
+              {apiKeysLoading ? (
+                <p className="empty-state">Loading API keys...</p>
+              ) : apiKeys.length > 0 ? (
                 <div className="api-key-list">
-                  {apiKeysLoading ? (
-                    <p className="insight-copy">Loading API keys...</p>
-                  ) : apiKeys.length > 0 ? (
-                    apiKeys.map((apiKey) => (
-                      <article className="api-key-item" key={apiKey.id}>
-                        <div>
-                          <strong>{apiKey.label}</strong>
-                          <p className="insight-copy">
-                            {apiKey.preview} · {apiKey.revokedAt ? "Revoked" : "Active"}
-                          </p>
-                        </div>
+                  {apiKeys.map((apiKey, index) => (
+                    <article className="api-key-row" key={apiKey.id}>
+                      <div className="api-key-name-cell">
+                        <strong>{`Key ${index + 1}`}</strong>
+                        <span>{apiKey.preview}</span>
+                      </div>
+                      <span className="api-key-meta">
+                        {apiKey.createdAt
+                          ? new Date(apiKey.createdAt).toLocaleDateString()
+                          : "--"}
+                      </span>
+                      <span className={`api-key-status ${apiKey.revokedAt ? "revoked" : "active"}`}>
+                        {apiKey.revokedAt ? "Revoked" : "Active"}
+                      </span>
+                      <div className="api-key-delete-cell">
                         {!apiKey.revokedAt ? (
                           <button
                             type="button"
                             className="revoke-key-btn"
                             onClick={() => handleRevokeApiKey(apiKey.id)}
+                            aria-label={`Revoke key ${index + 1}`}
                           >
-                            Revoke
+                            ×
                           </button>
-                        ) : null}
-                      </article>
-                    ))
-                  ) : (
-                    <p className="insight-copy">No API keys yet for this project.</p>
-                  )}
+                        ) : (
+                          <span className="api-key-delete-placeholder">--</span>
+                        )}
+                      </div>
+                    </article>
+                  ))}
                 </div>
-              </article>
+              ) : (
+                <p className="empty-state">No API keys yet.</p>
+              )}
             </section>
           </section>
         ) : null}

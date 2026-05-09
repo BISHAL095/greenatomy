@@ -191,6 +191,6 @@ describe("Dashboard UI", () => {
 
     expect(await screen.findByRole("heading", { name: "Project API keys" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create API key" })).toBeInTheDocument();
-    expect(await screen.findByText("Production SDK key")).toBeInTheDocument();
+    expect(await screen.findByText("Key 1")).toBeInTheDocument();
   });
 });

@@ -209,7 +209,7 @@ async function listProjectApiKeys(userId, projectId) {
   return {
     apiKeys: apiKeys.map((apiKey) => ({
       id: apiKey.id,
-      label: apiKey.label || "Unnamed key",
+      label: apiKey.label || "Key",
       createdAt: apiKey.createdAt,
       revokedAt: apiKey.revokedAt,
       preview: buildStoredKeyPreview(apiKey.id),
@@ -225,14 +225,14 @@ async function createProjectApiKey(userId, projectId, { label }) {
     data: {
       projectId,
       keyHash: hashApiKey(rawKey),
-      label: String(label || "").trim() || "SDK key",
+      label: String(label || "").trim() || "Key",
     },
   });
 
   return {
     apiKey: {
       id: apiKey.id,
-      label: apiKey.label || "SDK key",
+      label: apiKey.label || "Key",
       createdAt: apiKey.createdAt,
       revokedAt: apiKey.revokedAt,
       preview: maskApiKey(rawKey),
@@ -267,7 +267,7 @@ async function revokeProjectApiKey(userId, projectId, keyId) {
   return {
     apiKey: {
       id: revoked.id,
-      label: revoked.label || "Unnamed key",
+      label: revoked.label || "Key",
       createdAt: revoked.createdAt,
       revokedAt: revoked.revokedAt,
       preview: buildStoredKeyPreview(revoked.id),
