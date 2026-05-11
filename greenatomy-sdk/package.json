@@ -7,7 +7,8 @@
   "files": [
     "README.md",
     "http.js",
-    "index.js"
+    "index.js",
+    "middleware.js"
   ],
   "scripts": {
     "test": "node test/basic.test.js"

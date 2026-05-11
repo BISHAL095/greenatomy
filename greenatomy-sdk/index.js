@@ -1,5 +1,6 @@
 const request = require("./http");
 const { GreenatomySdkError } = request;
+const { greenatomyMiddleware } = require("./middleware");
 
 class GreenatomyClient {
   constructor({ baseUrl, token, apiKey, timeout = 5000 } = {}) {
@@ -83,3 +84,4 @@ class GreenatomyClient {
 
 module.exports = GreenatomyClient;
 module.exports.GreenatomySdkError = GreenatomySdkError;
+module.exports.greenatomyMiddleware = greenatomyMiddleware;

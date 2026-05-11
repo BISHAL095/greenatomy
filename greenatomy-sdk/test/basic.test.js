@@ -1,5 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const { EventEmitter } = require("node:events");
 
 function loadHttpWithMockedAxios(mockAxios) {
   // Re-require the transport module with a temporary axios implementation for isolated tests.
@@ -25,6 +26,35 @@ function loadHttpWithMockedAxios(mockAxios) {
   }
 
   return request;
+}
+
+function loadSdkIndexWithMockedAxios(mockAxios) {
+  const indexPath = require.resolve("../index");
+  const middlewarePath = require.resolve("../middleware");
+  const httpPath = require.resolve("../http");
+  const axiosPath = require.resolve("axios");
+
+  delete require.cache[indexPath];
+  delete require.cache[middlewarePath];
+  delete require.cache[httpPath];
+
+  const originalAxiosModule = require.cache[axiosPath];
+  require.cache[axiosPath] = {
+    id: axiosPath,
+    filename: axiosPath,
+    loaded: true,
+    exports: mockAxios,
+  };
+
+  const sdk = require("../index");
+
+  if (originalAxiosModule) {
+    require.cache[axiosPath] = originalAxiosModule;
+  } else {
+    delete require.cache[axiosPath];
+  }
+
+  return sdk;
 }
 
 test("returns response data on success", async () => {
@@ -124,4 +154,92 @@ test("maps 429 responses to RATE_LIMITED", async () => {
       return true;
     }
   );
+});
+
+test("middleware sends telemetry when the response finishes", async () => {
+  let capturedConfig;
+  const sdk = loadSdkIndexWithMockedAxios(async (config) => {
+    capturedConfig = config;
+    return { data: { ok: true } };
+  });
+
+  const middleware = sdk.greenatomyMiddleware({
+    baseUrl: "http://localhost:5000",
+    apiKey: "ga_live_test",
+  });
+
+  const req = {
+    method: "GET",
+    originalUrl: "/users?active=true",
+  };
+  const res = new EventEmitter();
+  res.statusCode = 201;
+
+  let nextCalled = false;
+  middleware(req, res, () => {
+    nextCalled = true;
+  });
+
+  assert.equal(nextCalled, true);
+  res.emit("finish");
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(capturedConfig.method, "POST");
+  assert.equal(capturedConfig.url, "http://localhost:5000/logs");
+  assert.equal(capturedConfig.headers["x-api-key"], "ga_live_test");
+  assert.equal(capturedConfig.data.method, "GET");
+  assert.equal(capturedConfig.data.path, "/users?active=true");
+  assert.equal(capturedConfig.data.statusCode, 201);
+  assert.equal(typeof capturedConfig.data.durationMs, "number");
+});
+
+test("middleware skips OPTIONS requests by default", async () => {
+  let requestCount = 0;
+  const sdk = loadSdkIndexWithMockedAxios(async () => {
+    requestCount += 1;
+    return { data: { ok: true } };
+  });
+
+  const middleware = sdk.greenatomyMiddleware({
+    baseUrl: "http://localhost:5000",
+    apiKey: "ga_live_test",
+  });
+
+  const req = { method: "OPTIONS", originalUrl: "/health" };
+  const res = new EventEmitter();
+  res.statusCode = 204;
+
+  middleware(req, res, () => {});
+  res.emit("finish");
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(requestCount, 0);
+});
+
+test("middleware swallows transport errors and calls onError", async () => {
+  const transportError = new Error("network down");
+  let capturedError;
+  const sdk = loadSdkIndexWithMockedAxios(async () => {
+    throw transportError;
+  });
+
+  const middleware = sdk.greenatomyMiddleware({
+    baseUrl: "http://localhost:5000",
+    apiKey: "ga_live_test",
+    onError: (error, req, res) => {
+      capturedError = { error, req, res };
+    },
+  });
+
+  const req = { method: "POST", url: "/jobs" };
+  const res = new EventEmitter();
+  res.statusCode = 500;
+
+  middleware(req, res, () => {});
+  res.emit("finish");
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(capturedError.error.name, "GreenatomySdkError");
+  assert.equal(capturedError.req, req);
+  assert.equal(capturedError.res, res);
 });

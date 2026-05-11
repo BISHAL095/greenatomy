@@ -45,6 +45,7 @@ Current SDK scope:
 - `createLog()`
 - `getStats()`
 - `getSummary()`
+- `greenatomyMiddleware()`
 
 ## API
 
@@ -83,6 +84,38 @@ Common payload fields:
 - `createdAt` (optional)
 
 `energyKwh`, `cost`, and `cpuUtil` are calculated by the backend collector and returned in the stored log.
+
+### `greenatomyMiddleware(options)`
+
+Express-style middleware for automatic inbound request telemetry.
+
+```js
+const express = require("express");
+const GreenatomyClient = require("greenatomy-sdk");
+const { greenatomyMiddleware } = GreenatomyClient;
+
+const app = express();
+
+app.use(
+  greenatomyMiddleware({
+    baseUrl: "http://localhost:5000",
+    apiKey: "ga_live_your_project_key",
+  })
+);
+```
+
+By default the middleware:
+
+- tracks every inbound request except `OPTIONS`
+- measures wall-clock request duration
+- sends `method`, `path`, `statusCode`, `durationMs`, and `createdAt`
+- never blocks the user request if telemetry submission fails
+
+Optional middleware options:
+
+- `shouldTrack(req, res)` to selectively skip requests
+- `onError(error, req, res)` to observe telemetry transport failures
+- `timeout` to override the default request timeout
 
 ### `getStats(params?)`
 
@@ -137,6 +170,7 @@ Possible `error.code` values:
 - `timeout` is optional and defaults to `5000` ms.
 - The client removes trailing slashes from `baseUrl`.
 - The SDK currently supports logs, telemetry creation, stats, and summary endpoints.
+- The SDK now also includes Express-style middleware for inbound request tracking.
 - `token` is ideal for authenticated dashboard/user access.
 - `apiKey` is ideal for project-level telemetry ingestion.
 
