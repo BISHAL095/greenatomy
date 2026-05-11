@@ -1,11 +1,13 @@
+const express = require("express");
 const GreenatomyClient = require("../greenatomy-sdk");
+
+const { greenatomyMiddleware } = GreenatomyClient;
 
 function readConfig() {
   const baseUrl = process.env.GREENATOMY_BASE_URL || "http://localhost:5000";
   const token = process.env.GREENATOMY_TOKEN || "";
   const apiKey = process.env.GREENATOMY_API_KEY || "";
-  const range = process.env.GREENATOMY_RANGE || "24h";
-  const timeout = Number(process.env.GREENATOMY_TIMEOUT || 5000);
+  const port = Number(process.env.DEMO_PORT || 4100);
 
   if (!token && !apiKey) {
     throw new Error(
@@ -17,64 +19,78 @@ function readConfig() {
     baseUrl,
     token: token || undefined,
     apiKey: apiKey || undefined,
-    range,
-    timeout,
+    port,
   };
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function main() {
   const config = readConfig();
+  const app = express();
 
-  const client = new GreenatomyClient({
-    baseUrl: config.baseUrl,
-    token: config.token,
-    apiKey: config.apiKey,
-    timeout: config.timeout,
+  app.use(express.json());
+  app.use(
+    greenatomyMiddleware({
+      baseUrl: config.baseUrl,
+      token: config.token,
+      apiKey: config.apiKey,
+      shouldTrack(req) {
+        return req.method !== "OPTIONS" && req.path !== "/health";
+      },
+      onError(error) {
+        console.error("[greenatomy-demo] telemetry failed:", error.message);
+      },
+    })
+  );
+
+  app.get("/", (req, res) => {
+    res.json({
+      ok: true,
+      message: "Greenatomy demo is running.",
+      routes: ["/", "/users", "/heavy", "/error", "/health"],
+    });
   });
 
-  const summary = await client.getSummary({ range: config.range });
-  const stats = await client.getStats({ range: config.range });
+  app.get("/users", (req, res) => {
+    res.json({
+      users: [
+        { id: 1, name: "Ada" },
+        { id: 2, name: "Linus" },
+      ],
+    });
+  });
 
-  console.log("\nGreenatomy Report\n");
+  app.get("/heavy", async (req, res) => {
+    await wait(180);
+    res.json({
+      ok: true,
+      durationHintMs: 180,
+    });
+  });
 
-  console.log("Stats:");
-  console.table([
-    {
-      Requests: stats.totalRequests,
-      "Avg Latency (ms)": Number(stats.avgDurationMs).toFixed(2),
-      "Energy (kWh)": Number(stats.totalEnergyKwh).toFixed(6),
-      "Cost (INR)": Number(stats.totalCost).toFixed(6),
-    },
-  ]);
+  app.get("/error", (req, res) => {
+    res.status(503).json({
+      error: "Synthetic upstream failure",
+    });
+  });
 
-  if (summary?.topCostRoute) {
-    console.log("\nTop Route (by cost):");
-    console.table([
-      {
-        Route: summary.topCostRoute.route,
-        Hits: summary.topCostRoute.hits,
-        "Total Cost (INR)": Number(summary.topCostRoute.totalCost).toFixed(6),
-      },
-    ]);
-  }
+  app.get("/health", (req, res) => {
+    res.json({ status: "ok" });
+  });
 
-  if (summary?.topSlowRoute) {
-    console.log("\nSlowest Route:");
-    console.table([
-      {
-        Route: summary.topSlowRoute.route,
-        "Avg Latency (ms)": Number(summary.topSlowRoute.avgDurationMs).toFixed(0),
-        Hits: summary.topSlowRoute.hits,
-      },
-    ]);
-  }
-
-  if (summary?.recommendations?.length) {
-    console.log("\nRecommendations:");
-    for (const item of summary.recommendations) {
-      console.log(`- ${item}`);
-    }
-  }
+  app.listen(config.port, () => {
+    console.log(`\nGreenatomy demo app listening on http://localhost:${config.port}`);
+    console.log(`Collector: ${config.baseUrl}`);
+    console.log("Tracked demo routes:");
+    console.log("  GET /");
+    console.log("  GET /users");
+    console.log("  GET /heavy");
+    console.log("  GET /error");
+    console.log("\nFire a few requests, then open the dashboard to see telemetry.\n");
+  });
 }
 
 main().catch((error) => {
