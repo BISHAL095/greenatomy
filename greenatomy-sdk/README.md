@@ -26,11 +26,13 @@ npm install
 const GreenatomyClient = require("greenatomy-sdk");
 
 const client = new GreenatomyClient({
-  baseUrl: "http://localhost:5000",
+  baseUrl: "https://greenatomy-1.onrender.com",
   apiKey: "ga_live_your_project_key",
   timeout: 8000,
 });
 ```
+
+> For your production deployment, use the backend URL on Render: `https://greenatomy-1.onrender.com`.
 
 You can authenticate with either:
 
@@ -98,7 +100,7 @@ const app = express();
 
 app.use(
   greenatomyMiddleware({
-    baseUrl: "http://localhost:5000",
+    baseUrl: "https://greenatomy-1.onrender.com",
     apiKey: "ga_live_your_project_key",
   })
 );

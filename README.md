@@ -81,6 +81,8 @@ Run:
 
     npm run dev
 
+> For production, deploy the backend first to Render and set `VITE_API_BASE=https://greenatomy-1.onrender.com` in Vercel.
+
 ## 3. Integrate Greenatomy SDK Into Your App
 
 Install or link `greenatomy-sdk`, then use middleware:
@@ -165,12 +167,14 @@ For MVP, SDK `x-api-key` must match backend `AUTH_TOKEN` exactly.
 
 ## Recommended Stack:
 - Frontend: Vercel
-- Backend: Railway / Render / Fly.io
+- Backend: Render (`https://greenatomy-1.onrender.com`)
 - Database: Neon / Supabase PostgreSQL
 
 ## Suggested Domains:
 - `app.greenatomy.com` -> Dashboard
 - `api.greenatomy.com` -> Backend Collector
+
+> Deploy backend first on Render, then deploy frontend on Vercel with `VITE_API_BASE=https://greenatomy-1.onrender.com`.
 
 # MVP Positioning
 
