@@ -36,8 +36,8 @@ const client = new GreenatomyClient({
 
 You can authenticate with either:
 
-- `apiKey`, sent as `x-api-key`, recommended for project telemetry ingestion
-- `token`, sent as `Authorization: Bearer <token>`, useful for dashboard or user-session reads
+- apiKey (`x-api-key`): Recommended for project-specific telemetry ingestion from production/staging/development apps
+- token (`Authorization: Bearer <token>`): Recommended for authenticated dashboard, user, and project management routesreads
 
 You can also override the default request timeout of `5000` ms with `timeout`.
 
@@ -101,8 +101,9 @@ const app = express();
 app.use(
   greenatomyMiddleware({
     baseUrl: "https://greenatomy-1.onrender.com",
-    apiKey: "ga_live_your_project_key",
-  })
+    apiKey: "ga_live_project_environment_key",
+    environment: "production",
+  });
 );
 ```
 
@@ -112,6 +113,8 @@ By default the middleware:
 - measures wall-clock request duration
 - sends `method`, `path`, `statusCode`, `durationMs`, and `createdAt`
 - never blocks the user request if telemetry submission fails
+- associates logs with the issuing project API key
+- tags logs by environment (`development`, `staging`, `production`)
 
 Optional middleware options:
 
@@ -169,6 +172,9 @@ Possible `error.code` values:
 
 - `baseUrl` is required.
 - Either `token` or `apiKey` is required.
+- API keys are project-scoped and generated from the dashboard.
+- Raw API keys are shown only once during creation.
+- Separate API keys can be used per environment for safer production isolation.
 - `timeout` is optional and defaults to `5000` ms.
 - The client removes trailing slashes from `baseUrl`.
 - The SDK currently supports logs, telemetry creation, stats, and summary endpoints.
