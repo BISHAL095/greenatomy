@@ -44,6 +44,7 @@ model RequestLog {
   id         String   @id @default(cuid())
   projectId  String?
   apiKeyId   String?
+  environment String? @default("production")
   method     String
   path       String
   statusCode Int?
@@ -58,6 +59,6 @@ model RequestLog {
 
   @@index([createdAt])
   @@index([method, path])
-  @@index([projectId, createdAt])
+  @@index([projectId, environment, createdAt])
   @@index([apiKeyId])
 }

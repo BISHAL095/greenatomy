@@ -2,11 +2,16 @@ const prisma = require("../lib/prisma");
 const energyCalculator = require("../utils/energyCalculator");
 
 // Translate normalized API filters into the Prisma `where` shape.
-function buildWhereClause({ method, path, createdAt, projectId }) {
+function buildWhereClause({ method, path, createdAt, projectId, environment }) {
   const where = {};
 
   if (projectId) {
     where.projectId = projectId;
+  }
+
+  // Keeps dev/staging/prod traffic isolated when filtering analytics.
+  if (environment) {
+    where.environment = environment;
   }
 
   if (method) {
@@ -71,12 +76,17 @@ async function fetchLogs(filters) {
 }
 
 async function createLog(payload) {
-  const { energy, cost, cpuUtil } = energyCalculator(payload.durationMs, payload.cpuUsedMs);
+  const { energy, cost, cpuUtil } = energyCalculator(
+    payload.durationMs,
+    payload.cpuUsedMs
+  );
 
   return prisma.requestLog.create({
     data: {
       projectId: payload.projectId,
       apiKeyId: payload.apiKeyId,
+      // Defaults to production unless SDK or client explicitly tags otherwise.
+      environment: payload.environment || "production",
       method: payload.method,
       path: payload.path,
       statusCode: payload.statusCode,
@@ -140,6 +150,7 @@ async function fetchSummary(filters) {
     prisma.requestLog.findMany({
       where,
       select: {
+        environment: true,
         method: true,
         path: true,
         statusCode: true,
@@ -154,13 +165,20 @@ async function fetchSummary(filters) {
   ]);
 
   const totalRequests = logs.length;
-  const errorCount = logs.filter((log) => Number(log.statusCode) >= 500).length;
-  const errorRate = totalRequests > 0 ? (errorCount / totalRequests) * 100 : 0;
+  const errorCount = logs.filter(
+    (log) => Number(log.statusCode) >= 500
+  ).length;
+  const errorRate =
+    totalRequests > 0 ? (errorCount / totalRequests) * 100 : 0;
 
   const routeMap = new Map();
+
   for (const log of logs) {
-    // Group by method + path so expensive and slow routes can be ranked together.
-    const key = `${log.method || "UNK"} ${log.path || "/"}`;
+    // Environment-aware grouping prevents staging and production routes from blending together.
+    const key = `${log.environment || "production"} | ${
+      log.method || "UNK"
+    } ${log.path || "/"}`;
+
     const current = routeMap.get(key) || {
       route: key,
       hits: 0,
@@ -173,16 +191,22 @@ async function fetchSummary(filters) {
     current.totalDurationMs += Number(log.durationMs || 0);
     current.totalCost += Number(log.cost || 0);
     current.totalEnergyKwh += Number(log.energyKwh || 0);
+
     routeMap.set(key, current);
   }
 
-  const topCostRoute = Array.from(routeMap.values()).sort((a, b) => b.totalCost - a.totalCost)[0] || null;
+  const topCostRoute =
+    Array.from(routeMap.values()).sort(
+      (a, b) => b.totalCost - a.totalCost
+    )[0] || null;
+
   const topSlowRoute =
     Array.from(routeMap.values())
       .map((route) => ({
         ...route,
         // Average latency is more useful than total latency when comparing uneven traffic volumes.
-        avgDurationMs: route.hits > 0 ? route.totalDurationMs / route.hits : 0,
+        avgDurationMs:
+          route.hits > 0 ? route.totalDurationMs / route.hits : 0,
       }))
       .sort((a, b) => b.avgDurationMs - a.avgDurationMs)[0] || null;
 
@@ -194,34 +218,52 @@ async function fetchSummary(filters) {
 
   const headlines = {
     stable: "System is running efficiently in the selected window.",
-    watch: "Efficiency drift detected. One or more routes need attention.",
-    critical: "Operational pressure is elevated. Immediate route review recommended.",
+    watch:
+      "Efficiency drift detected. One or more routes need attention.",
+    critical:
+      "Operational pressure is elevated. Immediate route review recommended.",
   };
 
   const highlights = [
     { label: "Error rate", value: `${errorRate.toFixed(2)}%` },
     { label: "Avg latency", value: toLatency(stats.avgDurationMs) },
-    { label: "Energy tracked", value: `${Number(stats.totalEnergyKwh || 0).toFixed(6)} kWh` },
+    {
+      label: "Energy tracked",
+      value: `${Number(stats.totalEnergyKwh || 0).toFixed(6)} kWh`,
+    },
     { label: "Estimated cost", value: toCurrency(stats.totalCost) },
   ];
 
   const recommendations = [];
+
   // Keep recommendations deterministic so the UI can present concise next actions.
   if (topSlowRoute && topSlowRoute.avgDurationMs > 1000) {
-    recommendations.push(`Investigate latency on ${topSlowRoute.route}.`);
+    recommendations.push(
+      `Investigate latency on ${topSlowRoute.route}.`
+    );
   }
+
   if (topCostRoute && topCostRoute.totalCost > 0) {
-    recommendations.push(`Review cost concentration on ${topCostRoute.route}.`);
+    recommendations.push(
+      `Review cost concentration on ${topCostRoute.route}.`
+    );
   }
+
   if (errorRate > 5) {
-    recommendations.push("Check recent 5xx responses before scaling traffic.");
+    recommendations.push(
+      "Check recent 5xx responses before scaling traffic."
+    );
   }
+
   if (recommendations.length === 0) {
-    recommendations.push("Current traffic profile looks healthy enough to share publicly.");
+    recommendations.push(
+      "Current traffic profile looks healthy enough to share publicly."
+    );
   }
 
   return {
     range: filters.range,
+    environment: filters.environment || "all",
     status,
     headline: headlines[status],
     highlights,

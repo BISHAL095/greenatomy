@@ -12,11 +12,15 @@ function getStatusCode(err) {
 
 async function buildScopedFilters(req, validateQuery) {
   const filters = validateQuery(req.query);
+
+  // Project scope is resolved after validation so users can only query allowed projects.
   const projectId = await buildScopedProjectId(req, filters.projectId);
 
   return {
     ...filters,
     projectId,
+    // Environment stays queryable across logs/stats/summary consistently.
+    environment: filters.environment,
   };
 }
 
@@ -29,21 +33,32 @@ async function buildScopedProjectId(req, requestedProjectId) {
 async function createLog(req, res) {
   try {
     const payload = validateCreateLogBody(req.body || {});
-    const projectId = req.auth?.type === "apiKey"
-      ? req.auth.projectId
-      : await buildScopedProjectId(req, payload.projectId);
+
+    // API keys are locked to their assigned project automatically.
+    const projectId =
+      req.auth?.type === "apiKey"
+        ? req.auth.projectId
+        : await buildScopedProjectId(req, payload.projectId);
+
     const log = await logsService.createLog({
       ...payload,
       projectId,
       apiKeyId: req.auth?.type === "apiKey" ? req.auth.apiKeyId : null,
+      // Default to production unless SDK explicitly sends another environment.
+      environment: payload.environment || "production",
     });
+
     res.status(201).json(log);
   } catch (err) {
     const statusCode = getStatusCode(err);
-    const message = statusCode === 500 ? "Failed to create log" : err.message;
+    const message =
+      statusCode === 500 ? "Failed to create log" : err.message;
 
     console.error("Create log failed:", err.message);
-    res.status(statusCode).json({ error: message });
+
+    res.status(statusCode).json({
+      error: message,
+    });
   }
 }
 
@@ -51,14 +66,20 @@ async function getLogs(req, res) {
   try {
     // Controllers only pass normalized filters into the service layer.
     const filters = await buildScopedFilters(req, validateLogsQuery);
+
     const logs = await logsService.fetchLogs(filters);
+
     res.json(logs);
   } catch (err) {
     const statusCode = getStatusCode(err);
-    const message = statusCode === 500 ? "Failed to fetch logs" : err.message;
+    const message =
+      statusCode === 500 ? "Failed to fetch logs" : err.message;
 
     console.error("Fetch logs failed:", err.message);
-    res.status(statusCode).json({ error: message });
+
+    res.status(statusCode).json({
+      error: message,
+    });
   }
 }
 
@@ -66,14 +87,20 @@ async function getStats(req, res) {
   try {
     // Stats intentionally share the same filtering semantics as the logs endpoint.
     const filters = await buildScopedFilters(req, validateStatsQuery);
+
     const stats = await logsService.fetchStats(filters);
+
     res.json(stats);
   } catch (err) {
     const statusCode = getStatusCode(err);
-    const message = statusCode === 500 ? "Failed to fetch stats" : err.message;
+    const message =
+      statusCode === 500 ? "Failed to fetch stats" : err.message;
 
     console.error("Stats fetch failed:", err.message);
-    res.status(statusCode).json({ error: message });
+
+    res.status(statusCode).json({
+      error: message,
+    });
   }
 }
 
@@ -81,14 +108,20 @@ async function getSummary(req, res) {
   try {
     // Summary is another aggregate view, so it uses the stats validator path.
     const filters = await buildScopedFilters(req, validateStatsQuery);
+
     const summary = await logsService.fetchSummary(filters);
+
     res.json(summary);
   } catch (err) {
     const statusCode = getStatusCode(err);
-    const message = statusCode === 500 ? "Failed to fetch summary" : err.message;
+    const message =
+      statusCode === 500 ? "Failed to fetch summary" : err.message;
 
     console.error("Summary fetch failed:", err.message);
-    res.status(statusCode).json({ error: message });
+
+    res.status(statusCode).json({
+      error: message,
+    });
   }
 }
 

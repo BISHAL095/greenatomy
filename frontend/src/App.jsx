@@ -97,6 +97,10 @@ function readDashboardState() {
       from: params.get("from") ?? "",
       to: params.get("to") ?? "",
       sort: VALID_SORTS.has(sort) ? sort : "desc",
+      environment:
+        ["development", "staging", "production"].includes(params.get("environment"))
+          ? params.get("environment")
+          : "production",
     },
     chartRange: VALID_CHART_RANGES.has(chartRange) ? chartRange : "7d",
   };
@@ -109,6 +113,7 @@ function buildDashboardSearch({ currentPage, filters, chartRange }) {
   params.set("page", currentPage);
   params.set("range", filters.range);
   params.set("sort", filters.sort);
+  params.set("environment", filters.environment);
   params.set("chartRange", chartRange);
 
   if (filters.method) {
@@ -242,6 +247,9 @@ function App() {
   const [sessionUser, setSessionUser] = useState(null);
   const [sessionProjects, setSessionProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [selectedEnvironment, setSelectedEnvironment] = useState(
+    readDashboardState().filters.environment
+  );
   const [apiKeys, setApiKeys] = useState([]);
   const [apiKeysLoading, setApiKeysLoading] = useState(false);
   const [apiKeysError, setApiKeysError] = useState("");
@@ -326,7 +334,9 @@ function App() {
   useEffect(() => {
     // Mirror browser back/forward navigation into component state.
     const syncFromUrl = () => {
-      setDashboardState(readDashboardState());
+      const nextState = readDashboardState();
+      setDashboardState(nextState);
+      setSelectedEnvironment(nextState.filters.environment);
     };
 
     window.addEventListener("popstate", syncFromUrl);
@@ -383,7 +393,6 @@ function App() {
 
   const overviewFilters = useMemo(
     () => ({
-      // The overview is intentionally pinned to all-time aggregates.
       projectId: selectedProjectId,
       method: "",
       path: "",
@@ -391,8 +400,9 @@ function App() {
       from: "",
       to: "",
       sort: "desc",
+      environment: selectedEnvironment,
     }),
-    [selectedProjectId]
+    [selectedProjectId, selectedEnvironment]
   );
 
   const currentProject = useMemo(
@@ -412,6 +422,7 @@ function App() {
     setSelectedProjectId(payload.project?.id || "");
     setApiKeys([]);
     setApiKeysError("");
+    setSelectedEnvironment("production");
     setApiKeysLoading(Boolean(payload.project?.id));
     setFreshApiKey("");
     setShowProjectForm(false);
@@ -426,6 +437,7 @@ function App() {
     setSessionProjects([]);
     setSelectedProjectId("");
     setApiKeys([]);
+    setSelectedEnvironment("production");
     setApiKeysError("");
     setApiKeysLoading(false);
     setFreshApiKey("");
@@ -594,6 +606,21 @@ function App() {
                       )}
                     </select>
                   </label>
+                  <label className="project-picker">
+                    <span>Environment</span>
+                    <select
+                      value={selectedEnvironment}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setSelectedEnvironment(value);
+                        updateFilter("environment", value);
+                      }}
+                    >
+                      <option value="development">Development</option>
+                      <option value="staging">Staging</option>
+                      <option value="production">Production</option>
+                    </select>
+                  </label>
                   <button
                     type="button"
                     className={`add-project-btn ${showProjectForm ? "active" : ""}`}
@@ -693,6 +720,22 @@ function App() {
                 </label>
 
                 <label className="inline-field">
+                  <span>Environment</span>
+                  <select
+                    value={selectedEnvironment}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSelectedEnvironment(value);
+                      updateFilter("environment", value);
+                    }}
+                  >
+                    <option value="development">Development</option>
+                    <option value="staging">Staging</option>
+                    <option value="production">Production</option>
+                  </select>
+                </label>
+
+                <label className="inline-field">
                   <span>Request path</span>
                   <input
                     value={filters.path}
@@ -749,12 +792,19 @@ function App() {
         ) : null}
 
         {currentPage === "logs" ? (
-          <LogsTable filters={{ ...deferredFilters, projectId: selectedProjectId }} />
+          <LogsTable
+            filters={{
+              ...deferredFilters,
+              projectId: selectedProjectId,
+              environment: selectedEnvironment,
+            }}
+          />
         ) : null}
         {currentPage === "charts" ? (
           <Suspense fallback={<section className="stats-panel"><p className="empty-state">Loading charts...</p></section>}>
             <ChartsPanel
               projectId={selectedProjectId}
+              environment={selectedEnvironment}
               range={chartRange}
               onRangeChange={handleChartRangeChange}
             />
@@ -774,7 +824,7 @@ function App() {
 
             {freshApiKey ? (
               <div className="status-banner success">
-                Save this key now: <code>{freshApiKey}</code>
+                Save this key for {selectedEnvironment}: <code>{freshApiKey}</code>
               </div>
             ) : null}
             {apiKeysError ? <p className="status-banner error">{apiKeysError}</p> : null}

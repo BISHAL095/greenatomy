@@ -4,8 +4,32 @@ function defaultShouldTrack(req) {
   return req?.method !== "OPTIONS";
 }
 
+// Normalize route source in priority order.
+// `req.route.path` gives cleaner route templates like /users/:id when available.
 function getRequestPath(req) {
+  if (req?.route?.path) {
+    return req.route.path;
+  }
+
   return req?.originalUrl || req?.url || req?.path || "/";
+}
+
+function normalizeEnvironment(environment) {
+  if (!environment) {
+    return "production";
+  }
+
+  const normalized = String(environment).trim().toLowerCase();
+
+  if (
+    normalized !== "development" &&
+    normalized !== "staging" &&
+    normalized !== "production"
+  ) {
+    return "production";
+  }
+
+  return normalized;
 }
 
 function toDurationMs(startNs) {
@@ -23,14 +47,23 @@ function greenatomyMiddleware({
   token,
   apiKey,
   timeout = 5000,
+  // Allows apps to explicitly separate dev/staging/prod traffic.
+  environment = process.env.NODE_ENV || "production",
 } = {}) {
   if (!baseUrl || typeof baseUrl !== "string") {
-    throw new TypeError("greenatomyMiddleware requires a valid baseUrl");
+    throw new TypeError(
+      "greenatomyMiddleware requires a valid baseUrl"
+    );
   }
 
   if (!token && !apiKey) {
-    throw new TypeError("greenatomyMiddleware requires either a token or apiKey");
+    throw new TypeError(
+      "greenatomyMiddleware requires either a token or apiKey"
+    );
   }
+
+  const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
+  const normalizedEnvironment = normalizeEnvironment(environment);
 
   return function greenatomyRouteTelemetry(req, res, next) {
     if (!shouldTrack(req, res)) {
@@ -50,7 +83,7 @@ function greenatomyMiddleware({
       submitted = true;
 
       request({
-        baseUrl: baseUrl.replace(/\/+$/, ""),
+        baseUrl: normalizedBaseUrl,
         token,
         apiKey,
         timeout,
@@ -63,17 +96,20 @@ function greenatomyMiddleware({
           durationMs: Math.max(0, toDurationMs(startNs)),
           cpuUsedMs: 0,
           createdAt: startedAt.toISOString(),
+          environment: normalizedEnvironment,
         },
-      })
-        .catch((error) => {
-          if (typeof onError === "function") {
-            onError(error, req, res);
-          }
-        });
+      }).catch((error) => {
+        // Telemetry should never break host app execution.
+        if (typeof onError === "function") {
+          onError(error, req, res);
+        }
+      });
     }
 
+    // `finish` handles successful responses, `close` catches aborted ones.
     res.once("finish", submitTelemetry);
     res.once("close", submitTelemetry);
+
     next();
   };
 }

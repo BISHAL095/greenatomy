@@ -1,4 +1,19 @@
-const ALLOWED_METHODS = new Set(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]);
+const ALLOWED_METHODS = new Set([
+  "GET",
+  "POST",
+  "PUT",
+  "PATCH",
+  "DELETE",
+  "HEAD",
+  "OPTIONS",
+]);
+
+const ALLOWED_ENVIRONMENTS = new Set([
+  "development",
+  "staging",
+  "production",
+]);
+
 const RANGE_TO_MS = {
   "24h": 24 * 60 * 60 * 1000,
   "7d": 7 * 24 * 60 * 60 * 1000,
@@ -26,6 +41,7 @@ function normalizePath(path) {
 
   // Preserve partial-path matching while rejecting empty-string filters.
   const normalized = String(path).trim();
+
   return normalized || undefined;
 }
 
@@ -33,7 +49,27 @@ function normalizeProjectId(projectId) {
   if (!projectId) return undefined;
 
   const normalized = String(projectId).trim();
+
   return normalized || undefined;
+}
+
+// Keep environments standardized so analytics don't split on typos or casing.
+function normalizeEnvironment(environment) {
+  if (!environment) return undefined;
+
+  const normalized = String(environment).trim().toLowerCase();
+
+  if (!normalized) return undefined;
+
+  if (!ALLOWED_ENVIRONMENTS.has(normalized)) {
+    const err = new Error(
+      "environment must be one of: development, staging, production."
+    );
+    err.statusCode = 400;
+    throw err;
+  }
+
+  return normalized;
 }
 
 function normalizeOptionalInteger(value, fieldName) {
@@ -42,8 +78,11 @@ function normalizeOptionalInteger(value, fieldName) {
   }
 
   const parsed = Number.parseInt(String(value), 10);
+
   if (!Number.isFinite(parsed) || parsed < 0) {
-    const err = new Error(`${fieldName} must be a non-negative integer.`);
+    const err = new Error(
+      `${fieldName} must be a non-negative integer.`
+    );
     err.statusCode = 400;
     throw err;
   }
@@ -57,8 +96,11 @@ function normalizeOptionalNumber(value, fieldName) {
   }
 
   const parsed = Number(value);
+
   if (!Number.isFinite(parsed) || parsed < 0) {
-    const err = new Error(`${fieldName} must be a non-negative number.`);
+    const err = new Error(
+      `${fieldName} must be a non-negative number.`
+    );
     err.statusCode = 400;
     throw err;
   }
@@ -89,8 +131,11 @@ function parseDate(value, fieldName) {
   if (!value) return undefined;
 
   const parsed = new Date(String(value));
+
   if (Number.isNaN(parsed.getTime())) {
-    const err = new Error(`${fieldName} must be a valid date/time.`);
+    const err = new Error(
+      `${fieldName} must be a valid date/time.`
+    );
     err.statusCode = 400;
     throw err;
   }
@@ -102,10 +147,13 @@ function normalizeRange(range) {
   if (!range) return "24h";
 
   const normalized = String(range).trim().toLowerCase();
+
   if (normalized === "all") return "all";
   if (RANGE_TO_MS[normalized]) return normalized;
 
-  const err = new Error("range must be one of: 24h, 7d, 30d, all.");
+  const err = new Error(
+    "range must be one of: 24h, 7d, 30d, all."
+  );
   err.statusCode = 400;
   throw err;
 }
@@ -121,7 +169,9 @@ function normalizeTimeWindow(query) {
     const lte = to || new Date();
 
     if (gte > lte) {
-      const err = new Error("from must be less than or equal to to.");
+      const err = new Error(
+        "from must be less than or equal to to."
+      );
       err.statusCode = 400;
       throw err;
     }
@@ -133,6 +183,7 @@ function normalizeTimeWindow(query) {
   }
 
   const range = normalizeRange(query.range);
+
   if (range === "all") {
     return {
       // `undefined` tells Prisma not to apply a `createdAt` filter at all.
@@ -159,6 +210,7 @@ function validateLogsQuery(query) {
     method: normalizeMethod(query.method),
     path: normalizePath(query.path),
     projectId: normalizeProjectId(query.projectId),
+    environment: normalizeEnvironment(query.environment),
     createdAt: timeWindow.createdAt,
     range: timeWindow.range,
   };
@@ -172,6 +224,7 @@ function validateStatsQuery(query) {
     method: normalizeMethod(query.method),
     path: normalizePath(query.path),
     projectId: normalizeProjectId(query.projectId),
+    environment: normalizeEnvironment(query.environment),
     createdAt: timeWindow.createdAt,
     range: timeWindow.range,
   };
@@ -180,10 +233,23 @@ function validateStatsQuery(query) {
 function validateCreateLogBody(body) {
   const method = normalizeMethod(body.method);
   const path = normalizePath(body.path);
-  const durationMs = normalizeOptionalInteger(body.durationMs, "durationMs");
-  const cpuUsedMs = normalizeOptionalNumber(body.cpuUsedMs, "cpuUsedMs");
-  const statusCode = normalizeOptionalInteger(body.statusCode, "statusCode");
+  const durationMs = normalizeOptionalInteger(
+    body.durationMs,
+    "durationMs"
+  );
+  const cpuUsedMs = normalizeOptionalNumber(
+    body.cpuUsedMs,
+    "cpuUsedMs"
+  );
+  const statusCode = normalizeOptionalInteger(
+    body.statusCode,
+    "statusCode"
+  );
   const createdAt = parseDate(body.createdAt, "createdAt");
+
+  // Defaults safely to production if SDK/client doesn't explicitly tag environment.
+  const environment =
+    normalizeEnvironment(body.environment) || "production";
 
   if (!method) {
     const err = new Error("method is required.");
@@ -205,6 +271,7 @@ function validateCreateLogBody(body) {
 
   return {
     projectId: normalizeProjectId(body.projectId),
+    environment,
     method,
     path,
     statusCode,

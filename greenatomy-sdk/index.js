@@ -3,7 +3,15 @@ const { GreenatomySdkError } = request;
 const { greenatomyMiddleware } = require("./middleware");
 
 class GreenatomyClient {
-  constructor({ baseUrl, token, apiKey, timeout = 5000 } = {}) {
+  constructor({
+    baseUrl,
+    token,
+    apiKey,
+    projectId,
+    environment = "production",
+    enabled = true,
+    timeout = 5000,
+  } = {}) {
     if (!baseUrl || typeof baseUrl !== "string") {
       throw new TypeError("GreenatomyClient requires a valid baseUrl");
     }
@@ -20,19 +28,52 @@ class GreenatomyClient {
       throw new TypeError("GreenatomyClient apiKey must be a string");
     }
 
+    // Optional project grouping so one account can track multiple apps cleanly.
+    if (projectId && typeof projectId !== "string") {
+      throw new TypeError("GreenatomyClient projectId must be a string");
+    }
+
+    // Helps separate telemetry between local/dev/staging/prod dashboards.
+    if (
+      typeof environment !== "string" ||
+      !["development", "staging", "production"].includes(environment)
+    ) {
+      throw new TypeError(
+        "GreenatomyClient environment must be one of: development, staging, production"
+      );
+    }
+
+    // Useful when developers want SDK installed but temporarily disabled.
+    if (typeof enabled !== "boolean") {
+      throw new TypeError("GreenatomyClient enabled must be a boolean");
+    }
+
     if (typeof timeout !== "number" || Number.isNaN(timeout) || timeout <= 0) {
       throw new TypeError("GreenatomyClient timeout must be a positive number");
     }
 
-    // Normalize the base URL once so request methods can append fixed endpoint paths safely.
+    // Clean trailing slashes once here so request methods stay predictable.
     this.baseUrl = baseUrl.replace(/\/+$/, "");
     this.token = token;
     this.apiKey = apiKey;
+    this.projectId = projectId;
+    this.environment = environment;
+    this.enabled = enabled;
     this.timeout = timeout;
   }
 
+  // Shared metadata gets attached automatically so backend can filter smarter.
+  buildMeta(params = {}) {
+    return {
+      ...params,
+      projectId: this.projectId,
+      environment: this.environment,
+    };
+  }
+
   async getLogs(params = {}) {
-    // Pass query params through unchanged so the SDK mirrors the HTTP API surface.
+    if (!this.enabled) return null;
+
     return request({
       baseUrl: this.baseUrl,
       token: this.token,
@@ -40,11 +81,13 @@ class GreenatomyClient {
       timeout: this.timeout,
       method: "GET",
       url: "/logs",
-      params,
+      params: this.buildMeta(params),
     });
   }
 
   async createLog(payload = {}) {
+    if (!this.enabled) return null;
+
     return request({
       baseUrl: this.baseUrl,
       token: this.token,
@@ -52,12 +95,17 @@ class GreenatomyClient {
       timeout: this.timeout,
       method: "POST",
       url: "/logs",
-      data: payload,
+      data: {
+        ...payload,
+        projectId: this.projectId,
+        environment: this.environment,
+      },
     });
   }
 
   async getStats(params = {}) {
-    // Stats and summary reuse the same transport layer and auth configuration.
+    if (!this.enabled) return null;
+
     return request({
       baseUrl: this.baseUrl,
       token: this.token,
@@ -65,11 +113,13 @@ class GreenatomyClient {
       timeout: this.timeout,
       method: "GET",
       url: "/logs/stats",
-      params,
+      params: this.buildMeta(params),
     });
   }
 
   async getSummary(params = {}) {
+    if (!this.enabled) return null;
+
     return request({
       baseUrl: this.baseUrl,
       token: this.token,
@@ -77,7 +127,21 @@ class GreenatomyClient {
       timeout: this.timeout,
       method: "GET",
       url: "/logs/summary",
-      params,
+      params: this.buildMeta(params),
+    });
+  }
+
+  // Quick sanity check so SDK users can confirm collector connectivity fast.
+  async healthCheck() {
+    if (!this.enabled) return null;
+
+    return request({
+      baseUrl: this.baseUrl,
+      token: this.token,
+      apiKey: this.apiKey,
+      timeout: this.timeout,
+      method: "GET",
+      url: "/health",
     });
   }
 }
