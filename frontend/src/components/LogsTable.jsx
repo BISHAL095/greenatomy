@@ -6,6 +6,36 @@ import { buildLogsSearchParams } from "../lib/logFilters";
 // Requests above this threshold are visually flagged for quick scanning.
 const SLOW_REQUEST_THRESHOLD_MS = 1000;
 
+function formatNumber(value, digits = 2) {
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) ? parsed.toFixed(digits) : "--";
+}
+
+function formatBytes(value) {
+  const bytes = Number(value || 0);
+
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return "0 B";
+  }
+
+  if (bytes < 1024) {
+    return `${bytes.toFixed(0)} B`;
+  }
+
+  const kb = bytes / 1024;
+  if (kb < 1024) {
+    return `${kb.toFixed(1)} KB`;
+  }
+
+  const mb = kb / 1024;
+  if (mb < 1024) {
+    return `${mb.toFixed(1)} MB`;
+  }
+
+  return `${(mb / 1024).toFixed(2)} GB`;
+}
+
 function getStatusTone(statusCode) {
   const status = Number(statusCode);
   if (!Number.isFinite(status)) return "unknown";
@@ -112,6 +142,8 @@ function LogsTable({ filters }) {
               <th>Status</th>
               <th>Duration</th>
               <th>CPU</th>
+              <th>Resources</th>
+              <th>Cloud</th>
               <th>Energy</th>
               <th>Cost</th>
               <th>Time</th>
@@ -120,7 +152,7 @@ function LogsTable({ filters }) {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan="8" className="empty-state">
+                <td colSpan="10" className="empty-state">
                   Loading recent logs...
                 </td>
               </tr>
@@ -128,7 +160,7 @@ function LogsTable({ filters }) {
 
             {!loading && pageLogs.length === 0 ? (
               <tr>
-                <td colSpan="8" className="empty-state">
+                <td colSpan="10" className="empty-state">
                   No request logs match the current filters.
                 </td>
               </tr>
@@ -157,9 +189,18 @@ function LogsTable({ filters }) {
                         <span className="slow-badge">Slow</span>
                       ) : null}
                     </td>
-                    <td>{Number(log.cpuUsedMs).toFixed(2)} ms</td>
-                    <td>{Number(log.energyKwh).toFixed(6)} kWh</td>
-                    <td>₹{Number(log.cost).toFixed(6)}</td>
+                    <td>{formatNumber(log.cpuUsedMs)} ms</td>
+                    <td className="metric-stack">
+                      <span>Mem {formatNumber(log.memoryDeltaMb)} MB</span>
+                      <span>Net {formatBytes(log.networkBytes)}</span>
+                      <span>IO {formatBytes(log.ioBytes)}</span>
+                    </td>
+                    <td className="metric-stack">
+                      <span>{log.provider || "generic"}</span>
+                      <span>{log.region || "global"}</span>
+                    </td>
+                    <td>{formatNumber(log.energyKwh, 6)} kWh</td>
+                    <td>₹{formatNumber(log.cost, 6)}</td>
                     <td>{new Date(log.createdAt).toLocaleString()}</td>
                   </tr>
                 ))

@@ -57,6 +57,8 @@ CORS_ORIGIN=http://localhost:5173
 AUTH_TOKEN=replace-with-strong-token
 LOGS_RATE_LIMIT_WINDOW_MS=60000
 LOGS_RATE_LIMIT_MAX_REQUESTS=60
+GREENATOMY_PROVIDER=aws
+GREENATOMY_REGION=ap-south-1
 ```
 
 ## Install
@@ -94,8 +96,30 @@ npm test
 ## API
 
 - `GET /health` -> health probe
+- `POST /logs` -> create a request telemetry log (protected)
 - `GET /logs` -> latest request logs (protected, supports time windows)
 - `GET /logs/stats` -> aggregated telemetry (protected, supports time windows)
+- `GET /logs/summary` -> deployment overview and route recommendations (protected)
+
+### Create Log Payload
+
+```json
+{
+  "method": "GET",
+  "path": "/api/users",
+  "statusCode": 200,
+  "durationMs": 142,
+  "cpuUsedMs": 38.5,
+  "memoryDeltaMb": 4.2,
+  "ioBytes": 0,
+  "networkBytes": 8192,
+  "provider": "aws",
+  "region": "ap-south-1",
+  "environment": "production"
+}
+```
+
+The backend calculates `energyKwh`, `cost`, and `cpuUtil`. Missing resource metrics default to `0`; missing provider/region falls back to the generic/global model.
 
 ## Automated Test Coverage
 
@@ -132,4 +156,5 @@ curl -H "Authorization: Bearer $AUTH_TOKEN" \
 
 - Middleware skips `/logs`, `/health`, and `OPTIONS` requests
 - Energy and cost are heuristic estimates intended for trend analysis
+- The energy model combines CPU, memory, IO, network transfer, provider PUE, and regional tariff factors
 - `/logs` routes require either `Authorization: Bearer <token>` or `x-api-key: <token>`

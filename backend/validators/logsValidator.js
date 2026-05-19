@@ -53,6 +53,14 @@ function normalizeProjectId(projectId) {
   return normalized || undefined;
 }
 
+function normalizeOptionalText(value) {
+  if (!value) return undefined;
+
+  const normalized = String(value).trim().toLowerCase();
+
+  return normalized || undefined;
+}
+
 // Keep environments standardized so analytics don't split on typos or casing.
 function normalizeEnvironment(environment) {
   if (!environment) return undefined;
@@ -241,6 +249,18 @@ function validateCreateLogBody(body) {
     body.cpuUsedMs,
     "cpuUsedMs"
   );
+  const memoryDeltaMb = normalizeOptionalNumber(
+    body.memoryDeltaMb,
+    "memoryDeltaMb"
+  );
+  const ioBytes = normalizeOptionalNumber(
+    body.ioBytes,
+    "ioBytes"
+  );
+  const networkBytes = normalizeOptionalNumber(
+    body.networkBytes,
+    "networkBytes"
+  );
   const statusCode = normalizeOptionalInteger(
     body.statusCode,
     "statusCode"
@@ -277,6 +297,11 @@ function validateCreateLogBody(body) {
     statusCode,
     durationMs,
     cpuUsedMs: cpuUsedMs ?? 0,
+    memoryDeltaMb: memoryDeltaMb ?? 0,
+    ioBytes: ioBytes ?? 0,
+    networkBytes: networkBytes ?? 0,
+    provider: normalizeOptionalText(body.provider),
+    region: normalizeOptionalText(body.region),
     createdAt,
   };
 }

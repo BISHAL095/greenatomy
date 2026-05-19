@@ -23,7 +23,7 @@ frontend/
 - Sticky top navbar with page-level sections: `Overview`, `Logs`, `Charts`
 - Shareable URLs that preserve the active page, logs filters, sort order, and charts window
 - Overview page with KPI cards and insight blocks (error rate, top costly/slow routes, key insights)
-- Logs page with inline filter toolbar, date sorting, pagination, status color coding, and slow-request highlighting
+- Logs page with inline filter toolbar, date sorting, pagination, status color coding, slow-request highlighting, and resource metric columns
 - Charts page with multiple chart types via `recharts`:
   - requests over time (line)
   - energy/cost trend (area)
@@ -31,6 +31,15 @@ frontend/
   - latency distribution (bar)
 - Auth-aware API requests using `VITE_API_TOKEN`
 - Loading/error states for all major data surfaces
+
+## Telemetry Fields Displayed
+
+The Logs page shows the backend-calculated model output and the resource inputs used by the estimator:
+
+- `durationMs`, `cpuUsedMs`
+- `memoryDeltaMb`, `ioBytes`, `networkBytes`
+- `provider`, `region`
+- `energyKwh`, `cost`
 
 ## Prerequisites
 

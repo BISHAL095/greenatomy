@@ -50,6 +50,11 @@ model RequestLog {
   statusCode Int?
   durationMs Int
   cpuUsedMs  Float
+  memoryDeltaMb Float?
+  ioBytes    Float?
+  networkBytes Float?
+  provider   String?
+  region     String?
   cpuUtil    Float
   energyKwh  Float
   cost       Float

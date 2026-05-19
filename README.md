@@ -24,6 +24,7 @@ Greenatomy is currently in functional MVP/Beta stage.
 - Route-level request logging
 - Latency tracking
 - Status code capture
+- Resource-aware energy model using CPU time, memory delta, network bytes, IO bytes, provider PUE, and regional tariff inputs
 - Auth-protected telemetry ingestion APIs
 - Dashboard visualization for request logs and route-level analytics
 - Aggregated request statistics
@@ -34,7 +35,6 @@ Greenatomy is currently in functional MVP/Beta stage.
 ### In Progress / Not Yet Production Ready:
 - Full multi-tenant project isolation
 - Per-project API key architecture
-- Advanced carbon estimation model
 - Request cost attribution for external APIs (OpenAI, Anthropic, Stripe, etc.)
 - Rate limiting + abuse prevention
 - CI/CD automation
@@ -95,7 +95,9 @@ Install or link `greenatomy-sdk`, then use middleware:
     app.use(
       greenatomyMiddleware({
         baseUrl: "http://localhost:3000",
-        apiKey: "your-auth-token"
+        apiKey: "your-project-api-key",
+        provider: "aws",
+        region: "ap-south-1"
       })
     );
 
@@ -103,6 +105,8 @@ This enables:
 - Automatic route capture
 - Latency logging
 - Status code tracking
+- Best-effort CPU, memory, network, and IO resource telemetry
+- Provider/region-aware energy and cost estimation
 - Telemetry forwarding to Greenatomy backend
 
 # Current API Endpoints
@@ -111,9 +115,10 @@ This enables:
 - `GET /health`
 
 ## Protected:
-- `POST /telemetry`
+- `POST /logs`
 - `GET /logs?limit=10&method=GET&path=/heavy&range=24h`
 - `GET /logs/stats?method=GET&path=/heavy&range=24h`
+- `GET /logs/summary?range=24h`
 
 # Auth Model (Current MVP)
 
@@ -122,7 +127,7 @@ Greenatomy currently supports:
 - `x-api-key: <AUTH_TOKEN>`
 
 ### Important:
-For MVP, SDK `x-api-key` must match backend `AUTH_TOKEN` exactly.
+For project telemetry ingestion, use `x-api-key` with a generated project API key. Bearer tokens are intended for authenticated dashboard/user access.
 
 # Run Tests
 

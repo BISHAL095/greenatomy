@@ -191,6 +191,10 @@ test("middleware sends telemetry when the response finishes", async () => {
   assert.equal(capturedConfig.data.path, "/users?active=true");
   assert.equal(capturedConfig.data.statusCode, 201);
   assert.equal(typeof capturedConfig.data.durationMs, "number");
+  assert.equal(typeof capturedConfig.data.cpuUsedMs, "number");
+  assert.equal(typeof capturedConfig.data.memoryDeltaMb, "number");
+  assert.equal(typeof capturedConfig.data.ioBytes, "number");
+  assert.equal(typeof capturedConfig.data.networkBytes, "number");
 });
 
 test("middleware skips OPTIONS requests by default", async () => {

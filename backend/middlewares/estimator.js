@@ -2,6 +2,12 @@ const process = require("process");
 const energyCalculator = require("../utils/energyCalculator");
 const prisma = require("../lib/prisma");
 
+function getSocketMetric(req, metric) {
+  const value = req?.socket?.[metric];
+
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
 // Ignore endpoints that are part of the monitoring surface itself.
 function shouldSkipLogging(req) {
   return (
@@ -20,16 +26,39 @@ function loggerMiddleware(req, res, next) {
 
   const startTime = Date.now();
   const startCPU = process.cpuUsage();
+  const startMemoryMb = process.memoryUsage().rss / 1024 / 1024;
+  const startBytesRead = getSocketMetric(req, "bytesRead");
+  const startBytesWritten = getSocketMetric(req, "bytesWritten");
 
   // Capture metrics after the response finishes so duration and status code are final.
   res.on("finish", async () => {
     const durationMs = Date.now() - startTime;
+    const memoryDeltaMb = Math.max(
+      0,
+      process.memoryUsage().rss / 1024 / 1024 - startMemoryMb
+    );
+    const networkBytes = Math.max(
+      0,
+      getSocketMetric(req, "bytesRead") -
+        startBytesRead +
+        getSocketMetric(req, "bytesWritten") -
+        startBytesWritten
+    );
 
     // `process.cpuUsage` returns microseconds consumed since `startCPU`.
     const cpuDiff = process.cpuUsage(startCPU);
     const cpuUsedMs = (cpuDiff.user + cpuDiff.system) / 1000;
 
-    const { energy, cost, cpuUtil } = energyCalculator(durationMs, cpuUsedMs);
+    const { energy, cost, cpuUtil } = energyCalculator({
+      durationMs,
+      cpuUsedMs,
+      memoryDeltaMb,
+      ioBytes: 0,
+      networkBytes,
+      provider: process.env.GREENATOMY_PROVIDER,
+      region: process.env.GREENATOMY_REGION,
+      route: `${req.method} ${req.path}`,
+    });
 
     // Keep a plain-text trace in stdout even if the database write fails later.
     console.log(
@@ -46,6 +75,11 @@ function loggerMiddleware(req, res, next) {
           statusCode: res.statusCode,
           durationMs,
           cpuUsedMs,
+          memoryDeltaMb,
+          ioBytes: 0,
+          networkBytes,
+          provider: process.env.GREENATOMY_PROVIDER,
+          region: process.env.GREENATOMY_REGION,
           cpuUtil,
           energyKwh: energy,
           cost,

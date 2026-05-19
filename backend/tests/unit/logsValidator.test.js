@@ -1,4 +1,8 @@
-const { validateLogsQuery, validateStatsQuery } = require("../../validators/logsValidator");
+const {
+  validateCreateLogBody,
+  validateLogsQuery,
+  validateStatsQuery,
+} = require("../../validators/logsValidator");
 
 describe("logsValidator", () => {
   test("defaults to 24h window and limit 50", () => {
@@ -39,5 +43,25 @@ describe("logsValidator", () => {
         to: "2026-03-01T00:00:00.000Z",
       })
     ).toThrow("from must be less than or equal to to.");
+  });
+
+  test("normalizes optional resource metrics on create", () => {
+    const result = validateCreateLogBody({
+      method: "GET",
+      path: "/demo",
+      durationMs: 100,
+      cpuUsedMs: 10.5,
+      memoryDeltaMb: "2.25",
+      ioBytes: "1024",
+      networkBytes: "2048",
+      provider: "AWS",
+      region: "AP-SOUTH-1",
+    });
+
+    expect(result.memoryDeltaMb).toBe(2.25);
+    expect(result.ioBytes).toBe(1024);
+    expect(result.networkBytes).toBe(2048);
+    expect(result.provider).toBe("aws");
+    expect(result.region).toBe("ap-south-1");
   });
 });

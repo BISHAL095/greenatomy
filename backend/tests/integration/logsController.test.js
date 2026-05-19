@@ -54,6 +54,7 @@ describe("logsController", () => {
       path: "/demo",
       durationMs: 100,
       cpuUsedMs: 10,
+      environment: "production",
     });
     logsService.resolveProjectScope = jest.fn().mockResolvedValue("project-1");
     logsService.createLog.mockResolvedValue({ id: "log-1" });
@@ -74,6 +75,7 @@ describe("logsController", () => {
       path: "/demo",
       durationMs: 100,
       cpuUsedMs: 10,
+      environment: "production",
     });
     expect(res.statusCode).toBe(201);
     expect(res.payload).toEqual({ id: "log-1" });

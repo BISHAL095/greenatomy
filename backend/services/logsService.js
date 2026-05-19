@@ -76,10 +76,16 @@ async function fetchLogs(filters) {
 }
 
 async function createLog(payload) {
-  const { energy, cost, cpuUtil } = energyCalculator(
-    payload.durationMs,
-    payload.cpuUsedMs
-  );
+  const { energy, cost, cpuUtil } = energyCalculator({
+    durationMs: payload.durationMs,
+    cpuUsedMs: payload.cpuUsedMs,
+    memoryDeltaMb: payload.memoryDeltaMb,
+    ioBytes: payload.ioBytes,
+    networkBytes: payload.networkBytes,
+    provider: payload.provider,
+    region: payload.region,
+    route: `${payload.method || "UNK"} ${payload.path || "/"}`,
+  });
 
   return prisma.requestLog.create({
     data: {
@@ -92,6 +98,11 @@ async function createLog(payload) {
       statusCode: payload.statusCode,
       durationMs: payload.durationMs,
       cpuUsedMs: payload.cpuUsedMs,
+      memoryDeltaMb: payload.memoryDeltaMb,
+      ioBytes: payload.ioBytes,
+      networkBytes: payload.networkBytes,
+      provider: payload.provider,
+      region: payload.region,
       cpuUtil,
       energyKwh: energy,
       cost,

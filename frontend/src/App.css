@@ -865,7 +865,7 @@
 .table-shell table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 860px;
+  min-width: 1120px;
 }
 
 .table-shell th,
@@ -1062,6 +1062,19 @@
   color: rgba(239, 247, 243, 0.88);
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   word-break: break-word;
+}
+
+.metric-stack {
+  display: grid;
+  gap: 0.22rem;
+  min-width: 7.5rem;
+  color: rgba(239, 247, 243, 0.84);
+  font-size: 0.84rem;
+  line-height: 1.25;
+}
+
+.metric-stack span {
+  white-space: nowrap;
 }
 
 .method-pill {

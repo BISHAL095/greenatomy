@@ -40,6 +40,18 @@ function toDurationMs(startNs) {
   return 0;
 }
 
+function toCpuUsedMs(startCpu) {
+  const cpuDiff = process.cpuUsage(startCpu);
+
+  return (cpuDiff.user + cpuDiff.system) / 1000;
+}
+
+function getSocketMetric(req, metric) {
+  const value = req?.socket?.[metric];
+
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
 function greenatomyMiddleware({
   shouldTrack = defaultShouldTrack,
   onError,
@@ -49,6 +61,8 @@ function greenatomyMiddleware({
   timeout = 5000,
   // Allows apps to explicitly separate dev/staging/prod traffic.
   environment = process.env.NODE_ENV || "production",
+  provider,
+  region,
 } = {}) {
   if (!baseUrl || typeof baseUrl !== "string") {
     throw new TypeError(
@@ -73,6 +87,10 @@ function greenatomyMiddleware({
 
     const startedAt = new Date();
     const startNs = process.hrtime.bigint();
+    const startCpu = process.cpuUsage();
+    const startMemoryMb = process.memoryUsage().rss / 1024 / 1024;
+    const startBytesRead = getSocketMetric(req, "bytesRead");
+    const startBytesWritten = getSocketMetric(req, "bytesWritten");
     let submitted = false;
 
     function submitTelemetry() {
@@ -81,6 +99,18 @@ function greenatomyMiddleware({
       }
 
       submitted = true;
+
+      const memoryDeltaMb = Math.max(
+        0,
+        process.memoryUsage().rss / 1024 / 1024 - startMemoryMb
+      );
+      const networkBytes = Math.max(
+        0,
+        getSocketMetric(req, "bytesRead") -
+          startBytesRead +
+          getSocketMetric(req, "bytesWritten") -
+          startBytesWritten
+      );
 
       request({
         baseUrl: normalizedBaseUrl,
@@ -94,7 +124,12 @@ function greenatomyMiddleware({
           path: getRequestPath(req),
           statusCode: res.statusCode,
           durationMs: Math.max(0, toDurationMs(startNs)),
-          cpuUsedMs: 0,
+          cpuUsedMs: toCpuUsedMs(startCpu),
+          memoryDeltaMb,
+          ioBytes: 0,
+          networkBytes,
+          provider,
+          region,
           createdAt: startedAt.toISOString(),
           environment: normalizedEnvironment,
         },

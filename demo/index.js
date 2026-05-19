@@ -10,6 +10,8 @@ function readConfig() {
   const token = process.env.GREENATOMY_TOKEN || "";
   const apiKey = process.env.GREENATOMY_API_KEY || "";
   const port = Number(process.env.DEMO_PORT || 4100);
+  const provider = process.env.GREENATOMY_PROVIDER || "generic";
+  const region = process.env.GREENATOMY_REGION || "global";
 
   if (!token && !apiKey) {
     throw new Error(
@@ -22,6 +24,8 @@ function readConfig() {
     token: token || undefined,
     apiKey: apiKey || undefined,
     port,
+    provider,
+    region,
   };
 }
 
@@ -39,6 +43,8 @@ async function main() {
       baseUrl: config.baseUrl,
       token: config.token,
       apiKey: config.apiKey,
+      provider: config.provider,
+      region: config.region,
       shouldTrack(req) {
         return req.method !== "OPTIONS" && req.path !== "/health";
       },
@@ -86,6 +92,7 @@ async function main() {
   app.listen(config.port, () => {
     console.log(`\nGreenatomy demo app listening on http://localhost:${config.port}`);
     console.log(`Collector: ${config.baseUrl}`);
+    console.log(`Energy model: provider=${config.provider}, region=${config.region}`);
     console.log("Tracked demo routes:");
     console.log("  GET /");
     console.log("  GET /users");

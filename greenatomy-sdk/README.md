@@ -73,6 +73,11 @@ const createdLog = await client.createLog({
   statusCode: 200,
   durationMs: 142,
   cpuUsedMs: 38.5,
+  memoryDeltaMb: 4.2,
+  ioBytes: 0,
+  networkBytes: 8192,
+  provider: "aws",
+  region: "ap-south-1",
 });
 ```
 
@@ -83,6 +88,11 @@ Common payload fields:
 - `statusCode` (optional)
 - `durationMs` (required)
 - `cpuUsedMs` (optional, defaults to `0`)
+- `memoryDeltaMb` (optional, defaults to `0`)
+- `ioBytes` (optional, defaults to `0`)
+- `networkBytes` (optional, defaults to `0`)
+- `provider` (optional, used for the energy model PUE factor)
+- `region` (optional, used for the model tariff factor)
 - `createdAt` (optional)
 
 `energyKwh`, `cost`, and `cpuUtil` are calculated by the backend collector and returned in the stored log.
@@ -103,6 +113,8 @@ app.use(
     baseUrl: "https://greenatomy-1.onrender.com",
     apiKey: "ga_live_project_environment_key",
     environment: "production",
+    provider: "aws",
+    region: "ap-south-1",
   });
 );
 ```
@@ -112,6 +124,7 @@ By default the middleware:
 - tracks every inbound request except `OPTIONS`
 - measures wall-clock request duration
 - sends `method`, `path`, `statusCode`, `durationMs`, and `createdAt`
+- sends best-effort `cpuUsedMs`, `memoryDeltaMb`, `ioBytes`, and `networkBytes`
 - never blocks the user request if telemetry submission fails
 - associates logs with the issuing project API key
 - tags logs by environment (`development`, `staging`, `production`)
@@ -121,6 +134,9 @@ Optional middleware options:
 - `shouldTrack(req, res)` to selectively skip requests
 - `onError(error, req, res)` to observe telemetry transport failures
 - `timeout` to override the default request timeout
+- `provider` and `region` to tune backend energy estimates
+
+`cpuUsedMs`, `memoryDeltaMb`, and `networkBytes` are measured best-effort from Node.js process/socket APIs. `ioBytes` defaults to `0` unless an application sends a measured value manually via `createLog()`.
 
 ### `getStats(params?)`
 

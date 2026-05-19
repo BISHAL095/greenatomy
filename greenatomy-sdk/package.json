@@ -1,6 +1,6 @@
 {
   "name": "greenatomy-sdk",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Lightweight Node.js SDK for Greenatomy logs and stats APIs.",
   "main": "index.js",
   "type": "commonjs",
