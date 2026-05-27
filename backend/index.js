@@ -5,6 +5,7 @@ const cors = require("cors");
 const authMiddleware = require("./middlewares/auth");
 const { createRateLimitMiddleware } = require("./middlewares/rateLimit");
 const env = require("./config/env");
+const PORT = process.env.PORT || 8000;
 
 // Express app bootstrap for telemetry APIs and demo routes.
 const app = express();
@@ -55,8 +56,10 @@ if (env.nodeEnv !== "production") {
 }
 
 if (require.main === module) {
-  app.listen(env.port, () => {
-    logServerEvent("Server listening", { port: env.port, nodeEnv: env.nodeEnv });
+  app.listen(PORT, "0.0.0.0", () => {
+
+    console.log(`Server running on port ${PORT}`);
+
   });
 }
 
