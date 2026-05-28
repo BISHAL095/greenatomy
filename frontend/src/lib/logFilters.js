@@ -52,6 +52,10 @@ export function buildLogsSearchParams(filters = {}, options = {}) {
     params.set("path", filters.path);
   }
 
+  if (filters.environment) {
+    params.set("environment", filters.environment);
+  }
+
   if (filters.range === "custom") {
     if (from) {
       params.set("from", from.toISOString());

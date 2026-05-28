@@ -115,6 +115,10 @@ function Stats({ filters }) {
           params.set("path", filters.path);
         }
 
+        if (filters.environment) {
+          params.set("environment", filters.environment);
+        }
+
         if (filters.range === "custom") {
           if (from) {
             params.set("from", from.toISOString());
@@ -198,6 +202,7 @@ function Stats({ filters }) {
           if (filters.projectId) prevParams.set("projectId", filters.projectId);
           if (filters.method) prevParams.set("method", filters.method);
           if (filters.path) prevParams.set("path", filters.path);
+          if (filters.environment) prevParams.set("environment", filters.environment);
           prevParams.set("from", prevFrom.toISOString());
           prevParams.set("to", prevTo.toISOString());
           prevParams.set("limit", "200");
