@@ -281,13 +281,17 @@ function App() {
           setSelectedProjectId((current) => current || res.data.projects?.[0]?.id || "");
         }
       })
-      .catch(() => {
+      .catch((err) => {
         if (!cancelled) {
-          clearStoredAuthToken();
-          setSessionToken("");
-          setSessionUser(null);
-          setSessionProjects([]);
-          setSelectedProjectId("");
+          const status = err?.response?.status;
+
+          if (status === 401 || status === 403) {
+            clearStoredAuthToken();
+            setSessionToken("");
+            setSessionUser(null);
+            setSessionProjects([]);
+            setSelectedProjectId("");
+          }
         }
       });
 
@@ -415,7 +419,12 @@ function App() {
       return;
     }
 
-    setStoredAuthToken(payload.token);
+    const tokenSaved = setStoredAuthToken(payload.token);
+    if (!tokenSaved) {
+      window.alert("Unable to save login session in this browser.");
+      return;
+    }
+
     setSessionToken(payload.token);
     setSessionUser(payload.user || null);
     setSessionProjects(payload.project ? [payload.project] : []);

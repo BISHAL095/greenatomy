@@ -1,4 +1,4 @@
-export const API_BASE = import.meta.env.VITE_API_BASE ?? "";
+export const API_BASE = (import.meta.env.VITE_API_BASE ?? "").replace(/\/+$/, "");
 const AUTH_STORAGE_KEY = "greenatomy.auth.token";
 
 export function getStoredAuthToken() {
@@ -6,15 +6,24 @@ export function getStoredAuthToken() {
     return "";
   }
 
-  return window.localStorage.getItem(AUTH_STORAGE_KEY) ?? "";
+  try {
+    return window.localStorage.getItem(AUTH_STORAGE_KEY) ?? "";
+  } catch {
+    return "";
+  }
 }
 
 export function setStoredAuthToken(token) {
   if (typeof window === "undefined") {
-    return;
+    return false;
   }
 
-  window.localStorage.setItem(AUTH_STORAGE_KEY, token);
+  try {
+    window.localStorage.setItem(AUTH_STORAGE_KEY, token);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function clearStoredAuthToken() {
@@ -22,7 +31,11 @@ export function clearStoredAuthToken() {
     return;
   }
 
-  window.localStorage.removeItem(AUTH_STORAGE_KEY);
+  try {
+    window.localStorage.removeItem(AUTH_STORAGE_KEY);
+  } catch {
+    // Ignore storage failures so logout/session cleanup does not crash the UI.
+  }
 }
 
 // Prefix relative API paths when the frontend is pointing at a separate backend origin.
