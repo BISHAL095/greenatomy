@@ -22,7 +22,7 @@ npm --prefix demo install
 Set your collector URL and project API key first:
 
 ```bash
-export GREENATOMY_BASE_URL="http://localhost:5000"
+export GREENATOMY_BASE_URL="http://localhost:8000"
 export GREENATOMY_API_KEY="ga_live_your_project_key"
 export GREENATOMY_PROVIDER="aws"
 export GREENATOMY_REGION="ap-south-1"
@@ -32,7 +32,7 @@ npm --prefix demo start
 If you want bearer auth instead:
 
 ```bash
-export GREENATOMY_BASE_URL="http://localhost:5000"
+export GREENATOMY_BASE_URL="http://localhost:8000"
 export GREENATOMY_TOKEN="your-user-token"
 npm --prefix demo start
 ```
@@ -40,6 +40,7 @@ npm --prefix demo start
 Optional environment variables:
 
 - `DEMO_PORT` default: `4100`
+- `GREENATOMY_ENVIRONMENT` default: `production`
 - `GREENATOMY_PROVIDER` default: `generic`
 - `GREENATOMY_REGION` default: `global`
 
@@ -80,6 +81,7 @@ app.use(
   greenatomyMiddleware({
     baseUrl: process.env.GREENATOMY_BASE_URL,
     apiKey: process.env.GREENATOMY_API_KEY,
+    environment: process.env.GREENATOMY_ENVIRONMENT,
     provider: process.env.GREENATOMY_PROVIDER,
     region: process.env.GREENATOMY_REGION,
   })

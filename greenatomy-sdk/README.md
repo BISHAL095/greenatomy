@@ -26,18 +26,18 @@ npm install
 const GreenatomyClient = require("greenatomy-sdk");
 
 const client = new GreenatomyClient({
-  baseUrl: "https://greenatomy-1.onrender.com",
+  baseUrl: "https://api.your-greenatomy-host.com",
   apiKey: "ga_live_your_project_key",
   timeout: 8000,
 });
 ```
 
-> For your production deployment, use the backend URL on Render: `https://greenatomy-1.onrender.com`.
+Use the backend URL for your own deployment.
 
 You can authenticate with either:
 
 - apiKey (`x-api-key`): Recommended for project-specific telemetry ingestion from production/staging/development apps
-- token (`Authorization: Bearer <token>`): Recommended for authenticated dashboard, user, and project management routesreads
+- token (`Authorization: Bearer <token>`): Recommended for authenticated dashboard, user, and analytics reads
 
 You can also override the default request timeout of `5000` ms with `timeout`.
 
@@ -110,12 +110,12 @@ const app = express();
 
 app.use(
   greenatomyMiddleware({
-    baseUrl: "https://greenatomy-1.onrender.com",
+    baseUrl: "https://api.your-greenatomy-host.com",
     apiKey: "ga_live_project_environment_key",
     environment: "production",
     provider: "aws",
     region: "ap-south-1",
-  });
+  })
 );
 ```
 
@@ -135,6 +135,7 @@ Optional middleware options:
 - `onError(error, req, res)` to observe telemetry transport failures
 - `timeout` to override the default request timeout
 - `provider` and `region` to tune backend energy estimates
+- `environment` to separate development, staging, and production traffic
 
 `cpuUsedMs`, `memoryDeltaMb`, and `networkBytes` are measured best-effort from Node.js process/socket APIs. `ioBytes` defaults to `0` unless an application sends a measured value manually via `createLog()`.
 
@@ -197,6 +198,7 @@ Possible `error.code` values:
 - The SDK now also includes Express-style middleware for inbound request tracking.
 - `token` is ideal for authenticated dashboard/user access.
 - `apiKey` is ideal for project-level telemetry ingestion.
+- The static backend `AUTH_TOKEN` should not be used in browser clients.
 
 ## Recommended Onboarding
 

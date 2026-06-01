@@ -26,17 +26,19 @@ Greenatomy is currently in functional MVP/Beta stage.
 - Status code capture
 - Resource-aware energy model using CPU time, memory delta, network bytes, IO bytes, provider PUE, and regional tariff inputs
 - Auth-protected telemetry ingestion APIs
+- User registration/login with signed dashboard sessions
+- Project creation and project-scoped API key management
 - Dashboard visualization for request logs and route-level analytics
 - Aggregated request statistics
+- Environment-aware filtering for development, staging, and production traffic
 - Middleware-based SDK integration
 - Demo application for SDK testing
 - Backend + frontend test suites
 
 ### In Progress / Not Yet Production Ready:
-- Full multi-tenant project isolation
-- Per-project API key architecture
+- Full enterprise-grade multi-tenant project isolation
 - Request cost attribution for external APIs (OpenAI, Anthropic, Stripe, etc.)
-- Rate limiting + abuse prevention
+- Advanced abuse prevention
 - CI/CD automation
 - Observability stack (logging, tracing, alerting)
 
@@ -58,8 +60,10 @@ Greenatomy helps developers answer:
 Create `.env` inside `backend/`:
 
     DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DB_NAME
-    PORT=3000
+    PORT=8000
+    CORS_ORIGIN=http://localhost:5173
     AUTH_TOKEN=replace-with-strong-token
+    AUTH_TOKEN_SECRET=replace-with-strong-token
     NODE_ENV=development
 
 Run:
@@ -74,14 +78,13 @@ Run:
 
 Create `.env` inside `frontend/`:
 
-    VITE_API_BASE=http://localhost:3000
-    VITE_API_TOKEN=replace-with-same-backend-auth-token
+    VITE_API_BASE=http://localhost:8000
 
 Run:
 
     npm run dev
 
-> For production, deploy the backend first to Render and set `VITE_API_BASE=https://greenatomy-1.onrender.com` in Vercel.
+> For production, deploy the backend first and set `VITE_API_BASE` in Vercel to the backend HTTPS URL. If the backend is behind ngrok, the frontend automatically sends the `ngrok-skip-browser-warning` header for `ngrok-free.dev` API bases.
 
 ## 3. Integrate Greenatomy SDK Into Your App
 
@@ -94,7 +97,7 @@ Install or link `greenatomy-sdk`, then use middleware:
 
     app.use(
       greenatomyMiddleware({
-        baseUrl: "http://localhost:3000",
+        baseUrl: "http://localhost:8000",
         apiKey: "your-project-api-key",
         provider: "aws",
         region: "ap-south-1"
@@ -113,8 +116,15 @@ This enables:
 
 ## Public:
 - `GET /health`
+- `POST /auth/register`
+- `POST /auth/login`
 
 ## Protected:
+- `GET /auth/me`
+- `POST /auth/projects`
+- `GET /auth/projects/:projectId/keys`
+- `POST /auth/projects/:projectId/keys`
+- `POST /auth/projects/:projectId/keys/:keyId/revoke`
 - `POST /logs`
 - `GET /logs?limit=10&method=GET&path=/heavy&range=24h`
 - `GET /logs/stats?method=GET&path=/heavy&range=24h`
@@ -123,11 +133,12 @@ This enables:
 # Auth Model (Current MVP)
 
 Greenatomy currently supports:
-- `Authorization: Bearer <token>`
-- `x-api-key: <AUTH_TOKEN>`
+- `Authorization: Bearer <user-session-token>` for dashboard and authenticated analytics reads
+- `x-api-key: <project-api-key>` for SDK telemetry ingestion
+- Optional static `AUTH_TOKEN` for system/admin-style access to telemetry routes
 
 ### Important:
-For project telemetry ingestion, use `x-api-key` with a generated project API key. Bearer tokens are intended for authenticated dashboard/user access.
+For project telemetry ingestion, use `x-api-key` with a generated project API key. Bearer tokens are intended for authenticated dashboard/user access. The static `AUTH_TOKEN` is not a frontend session token and should not be exposed in browser builds.
 
 # Run Tests
 
@@ -150,10 +161,9 @@ For project telemetry ingestion, use `x-api-key` with a generated project API ke
 - Team dashboards
 
 ## Security:
-- Request validation
-- Rate limiting
-- Payload sanitization
-- Abuse prevention
+- Broader request validation and payload sanitization
+- Stronger abuse prevention
+- Secret management hardening
 
 ## Product:
 - External API cost tracking
@@ -164,22 +174,21 @@ For project telemetry ingestion, use `x-api-key` with a generated project API ke
 ## Engineering:
 - CI/CD pipeline
 - Lint/test/build gates
-- Dockerization
-- Production deployment configs
+- Production Docker/ECS workflow hardening
 - Logging + tracing
 
 # Deployment Vision
 
 ## Recommended Stack:
 - Frontend: Vercel
-- Backend: Render (`https://greenatomy-1.onrender.com`)
-- Database: Neon / Supabase PostgreSQL
+- Backend: AWS ECS/Fargate, EC2, Render, or another Node-compatible host
+- Database: Neon / Supabase / AWS RDS PostgreSQL
 
 ## Suggested Domains:
 - `app.greenatomy.com` -> Dashboard
 - `api.greenatomy.com` -> Backend Collector
 
-> Deploy backend first on Render, then deploy frontend on Vercel with `VITE_API_BASE=https://greenatomy-1.onrender.com`.
+> Deploy the backend first, configure `CORS_ORIGIN` with the frontend URL, then deploy the frontend with `VITE_API_BASE` pointing to the backend URL.
 
 # MVP Positioning
 

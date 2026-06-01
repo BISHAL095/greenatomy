@@ -13,7 +13,7 @@ frontend/
       LogsTable.jsx        # logs explorer table
       ChartsPanel.jsx      # trend/distribution charts
     lib/
-      api.js               # API base URL + auth headers
+      api.js               # API base URL, auth/session storage, request headers
   public/
   index.html
 ```
@@ -29,7 +29,10 @@ frontend/
   - energy/cost trend (area)
   - status distribution (pie)
   - latency distribution (bar)
-- Auth-aware API requests using `VITE_API_TOKEN`
+- Login/register flow using backend-issued bearer tokens
+- Session persistence in localStorage for refresh-safe dashboard state
+- Project selector, environment selector, and project API key management
+- Auth-aware API requests using stored user session tokens
 - Loading/error states for all major data surfaces
 
 ## Telemetry Fields Displayed
@@ -50,9 +53,14 @@ The Logs page shows the backend-calculated model output and the resource inputs 
 Create `frontend/.env`:
 
 ```env
-VITE_API_BASE=http://localhost:3000
-VITE_API_TOKEN=replace-with-same-backend-auth-token
+VITE_API_BASE=http://localhost:8000
 ```
+
+`VITE_API_TOKEN` is no longer used. The dashboard signs in through `/auth/login` and stores the returned user session token in localStorage.
+
+For Vercel, set `VITE_API_BASE` in the Vercel project environment variables and redeploy. The backend must include the Vercel URL in `CORS_ORIGIN`.
+
+If `VITE_API_BASE` points to an `ngrok-free.dev` URL, the frontend automatically sends `ngrok-skip-browser-warning: true`.
 
 ## Install
 
@@ -84,6 +92,7 @@ Supported query params:
 - `range`: logs time range (`24h`, `7d`, `30d`, `all`, `custom`)
 - `from` / `to`: custom datetime values used when `range=custom`
 - `sort`: `desc` or `asc`
+- `environment`: `development`, `staging`, or `production`
 - `chartRange`: charts window (`24h`, `7d`, `30d`)
 
 ## Build
@@ -103,6 +112,7 @@ npm test
 
 - No named/saved filter presets across sessions
 - Overview cards still use the fixed all-time summary instead of URL-driven filters
+- Browser localStorage is used for the dashboard session snapshot, so users should log out on shared machines
 
 ## Suggested Next UI Improvements
 
