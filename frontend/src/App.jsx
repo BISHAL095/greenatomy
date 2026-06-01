@@ -3,10 +3,14 @@ import axios from "axios";
 import Stats from "./components/Stats";
 import LogsTable from "./components/LogsTable";
 import {
+  buildApiConfig,
   buildApiUrl,
   clearStoredAuthToken,
+  clearStoredSession,
   getStoredAuthToken,
+  getStoredSession,
   setStoredAuthToken,
+  setStoredSession,
 } from "./lib/api";
 import "./App.css";
 
@@ -165,7 +169,7 @@ function AuthScreen({ mode, onModeChange, onAuthenticated }) {
               password: form.password,
             };
 
-      const res = await axios.post(buildApiUrl(endpoint), payload);
+      const res = await axios.post(buildApiUrl(endpoint), payload, buildApiConfig(""));
       onAuthenticated(res.data);
     } catch (err) {
       setError(err?.response?.data?.error || "Unable to complete authentication.");
@@ -241,12 +245,14 @@ function AuthScreen({ mode, onModeChange, onAuthenticated }) {
 }
 
 function App() {
+  const storedSession = useMemo(getStoredSession, []);
   const [dashboardState, setDashboardState] = useState(readDashboardState);
   const [authMode, setAuthMode] = useState("login");
   const [sessionToken, setSessionToken] = useState(getStoredAuthToken);
-  const [sessionUser, setSessionUser] = useState(null);
-  const [sessionProjects, setSessionProjects] = useState([]);
-  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [sessionUser, setSessionUser] = useState(storedSession?.user || null);
+  const [sessionProjects, setSessionProjects] = useState(storedSession?.projects || []);
+  const [sessionError, setSessionError] = useState("");
+  const [selectedProjectId, setSelectedProjectId] = useState(storedSession?.selectedProjectId || "");
   const [selectedEnvironment, setSelectedEnvironment] = useState(
     readDashboardState().filters.environment
   );
@@ -269,28 +275,29 @@ function App() {
     let cancelled = false;
 
     axios
-      .get(buildApiUrl("/auth/me"), {
-        headers: {
-          Authorization: `Bearer ${sessionToken}`,
-        },
-      })
+      .get(buildApiUrl("/auth/me"), buildApiConfig(sessionToken))
       .then((res) => {
         if (!cancelled) {
+          const projects = res.data.projects || [];
+          const nextSelectedProjectId = selectedProjectId || projects[0]?.id || "";
+
           setSessionUser(res.data.user);
-          setSessionProjects(res.data.projects || []);
-          setSelectedProjectId((current) => current || res.data.projects?.[0]?.id || "");
+          setSessionProjects(projects);
+          setSelectedProjectId((current) => current || nextSelectedProjectId);
+          setStoredSession({
+            user: res.data.user,
+            projects,
+            selectedProjectId: nextSelectedProjectId,
+          });
+          setSessionError("");
         }
       })
       .catch((err) => {
         if (!cancelled) {
-          const status = err?.response?.status;
-
-          if (status === 401 || status === 403) {
-            clearStoredAuthToken();
-            setSessionToken("");
-            setSessionUser(null);
-            setSessionProjects([]);
-            setSelectedProjectId("");
+          if (!sessionUser && sessionProjects.length === 0) {
+            setSessionError(
+              err?.response?.data?.error || "Unable to restore session. Please retry or log out."
+            );
           }
         }
       });
@@ -308,11 +315,7 @@ function App() {
     let cancelled = false;
 
     axios
-      .get(buildApiUrl(`/auth/projects/${selectedProjectId}/keys`), {
-        headers: {
-          Authorization: `Bearer ${sessionToken}`,
-        },
-      })
+      .get(buildApiUrl(`/auth/projects/${selectedProjectId}/keys`), buildApiConfig(sessionToken))
       .then((res) => {
         if (!cancelled) {
           setApiKeys(res.data.apiKeys || []);
@@ -334,6 +337,18 @@ function App() {
       cancelled = true;
     };
   }, [sessionToken, selectedProjectId]);
+
+  useEffect(() => {
+    if (!sessionToken || (!sessionUser && sessionProjects.length === 0)) {
+      return;
+    }
+
+    setStoredSession({
+      user: sessionUser,
+      projects: sessionProjects,
+      selectedProjectId,
+    });
+  }, [sessionToken, sessionUser, sessionProjects, selectedProjectId]);
 
   useEffect(() => {
     // Mirror browser back/forward navigation into component state.
@@ -427,8 +442,16 @@ function App() {
 
     setSessionToken(payload.token);
     setSessionUser(payload.user || null);
-    setSessionProjects(payload.project ? [payload.project] : []);
-    setSelectedProjectId(payload.project?.id || "");
+    const projects = payload.project ? [payload.project] : [];
+    const nextSelectedProjectId = payload.project?.id || "";
+    setSessionProjects(projects);
+    setSessionError("");
+    setSelectedProjectId(nextSelectedProjectId);
+    setStoredSession({
+      user: payload.user || null,
+      projects,
+      selectedProjectId: nextSelectedProjectId,
+    });
     setApiKeys([]);
     setApiKeysError("");
     setSelectedEnvironment("production");
@@ -441,9 +464,11 @@ function App() {
 
   function handleLogout() {
     clearStoredAuthToken();
+    clearStoredSession();
     setSessionToken("");
     setSessionUser(null);
     setSessionProjects([]);
+    setSessionError("");
     setSelectedProjectId("");
     setApiKeys([]);
     setSelectedEnvironment("production");
@@ -471,11 +496,7 @@ function App() {
       const res = await axios.post(
         buildApiUrl("/auth/projects"),
         { name },
-        {
-          headers: {
-            Authorization: `Bearer ${sessionToken}`,
-          },
-        }
+        buildApiConfig(sessionToken)
       );
 
       const nextProject = res.data?.project;
@@ -485,6 +506,11 @@ function App() {
 
       setSessionProjects((current) => [...current, nextProject]);
       setSelectedProjectId(nextProject.id);
+      setStoredSession({
+        user: sessionUser,
+        projects: [...sessionProjects, nextProject],
+        selectedProjectId: nextProject.id,
+      });
       setApiKeys([]);
       setApiKeysError("");
       setApiKeysLoading(true);
@@ -509,11 +535,7 @@ function App() {
       const res = await axios.post(
         buildApiUrl(`/auth/projects/${selectedProjectId}/keys`),
         {},
-        {
-          headers: {
-            Authorization: `Bearer ${sessionToken}`,
-          },
-        }
+        buildApiConfig(sessionToken)
       );
 
       setApiKeys((current) => [res.data.apiKey, ...current]);
@@ -532,11 +554,7 @@ function App() {
       const res = await axios.post(
         buildApiUrl(`/auth/projects/${selectedProjectId}/keys/${keyId}/revoke`),
         {},
-        {
-          headers: {
-            Authorization: `Bearer ${sessionToken}`,
-          },
-        }
+        buildApiConfig(sessionToken)
       );
 
       setApiKeys((current) =>
@@ -681,6 +699,9 @@ function App() {
                 </div>
                 {projectFormError ? <p className="status-banner error">{projectFormError}</p> : null}
               </form>
+            ) : null}
+            {sessionError && !sessionUser && sessionProjects.length === 0 ? (
+              <p className="status-banner error">{sessionError}</p>
             ) : null}
           </header>
 

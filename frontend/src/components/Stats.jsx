@@ -92,8 +92,11 @@ function Stats({ filters }) {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchStats = async () => {
       setLoading(true);
       setError("");
@@ -135,18 +138,22 @@ function Stats({ filters }) {
           buildApiUrl(`/logs/stats?${params.toString()}`),
           buildApiConfig()
         );
+        if (cancelled) return;
         setStats(res.data);
+        setHasLoaded(true);
 
         const summaryRes = await axios.get(
           buildApiUrl(`/logs/summary?${params.toString()}`),
           buildApiConfig()
         );
+        if (cancelled) return;
         setSummary(summaryRes.data);
 
         const logsRes = await axios.get(
           buildApiUrl(`/logs?${params.toString()}&limit=200`),
           buildApiConfig()
         );
+        if (cancelled) return;
 
         const logs = Array.isArray(logsRes.data) ? logsRes.data : [];
         const currentMetrics = calculateMetrics(logs);
@@ -211,6 +218,7 @@ function Stats({ filters }) {
             buildApiUrl(`/logs?${prevParams.toString()}`),
             buildApiConfig()
           );
+          if (cancelled) return;
           const prevLogs = Array.isArray(prevLogsRes.data) ? prevLogsRes.data : [];
           const prevMetrics = calculateMetrics(prevLogs);
 
@@ -254,7 +262,12 @@ function Stats({ filters }) {
           messages,
           deltas,
         });
+        setError("");
       } catch (err) {
+        if (cancelled) {
+          return;
+        }
+
         const status = err?.response?.status;
         if (status === 401) {
           setError("Unauthorized. Please sign in to access dashboard stats.");
@@ -262,11 +275,17 @@ function Stats({ filters }) {
           setError("Unable to load dashboard stats.");
         }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     fetchStats();
+
+    return () => {
+      cancelled = true;
+    };
   }, [filters]);
 
   const cards = [
@@ -309,7 +328,9 @@ function Stats({ filters }) {
         </p>
       </div>
 
-      {error ? <p className="status-banner error">{error}</p> : null}
+      {error && !hasLoaded ? (
+        <p className="status-banner error">{error}</p>
+      ) : null}
 
       <div className="stats-grid" aria-busy={loading}>
         {cards.map((card) => (

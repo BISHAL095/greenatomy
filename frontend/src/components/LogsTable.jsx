@@ -59,6 +59,8 @@ function LogsTable({ filters }) {
   }, [projectId, method, path, range, from, to, sort, environment, pageSize]);
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchLogs = async () => {
       setLoading(true);
       setError("");
@@ -71,8 +73,15 @@ function LogsTable({ filters }) {
         );
 
         const res = await axios.get(buildApiUrl(`/logs?${params.toString()}`), buildApiConfig());
-        setRawLogs(res.data);
+        if (!cancelled) {
+          setRawLogs(res.data);
+          setError("");
+        }
       } catch (err) {
+        if (cancelled) {
+          return;
+        }
+
         const status = err?.response?.status;
         if (status === 401) {
           setError("Unauthorized. Please sign in to access request logs.");
@@ -80,11 +89,17 @@ function LogsTable({ filters }) {
           setError("Unable to load request logs.");
         }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     fetchLogs();
+
+    return () => {
+      cancelled = true;
+    };
   }, [projectId, method, path, range, from, to, environment]);
 
   const sortedLogs = useMemo(() => {
@@ -117,7 +132,7 @@ function LogsTable({ filters }) {
         </p>
       </div>
 
-      {error ? <p className="status-banner error">{error}</p> : null}
+      {error && rawLogs.length === 0 ? <p className="status-banner error">{error}</p> : null}
 
       <div className="table-controls">
         <p className="table-summary">

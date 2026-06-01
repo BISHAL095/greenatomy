@@ -143,6 +143,8 @@ function ChartsPanel({ projectId, environment, range, onRangeChange }) {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchLogs = async () => {
       setLoading(true);
       setError("");
@@ -152,12 +154,18 @@ function ChartsPanel({ projectId, environment, range, onRangeChange }) {
         const params = buildLogsSearchParams({ projectId, environment, range }, { limit: 200 });
 
         const res = await axios.get(buildApiUrl(`/logs?${params.toString()}`), buildApiConfig());
+        if (cancelled) return;
         const logs = Array.isArray(res.data) ? res.data : [];
 
         setSeries(buildTimeSeries(logs, range));
         setStatusSeries(buildStatusSeries(logs));
         setLatencySeries(buildLatencySeries(logs));
+        setError("");
       } catch (err) {
+        if (cancelled) {
+          return;
+        }
+
         const status = err?.response?.status;
         if (status === 401) {
           setError("Unauthorized. Please sign in to access chart data.");
@@ -165,11 +173,17 @@ function ChartsPanel({ projectId, environment, range, onRangeChange }) {
           setError("Unable to load chart data.");
         }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     fetchLogs();
+
+    return () => {
+      cancelled = true;
+    };
   }, [projectId, environment, range]);
 
   const totals = useMemo(() => {
@@ -204,7 +218,7 @@ function ChartsPanel({ projectId, environment, range, onRangeChange }) {
         </label>
       </div>
 
-      {error ? <p className="status-banner error">{error}</p> : null}
+      {error && series.length === 0 ? <p className="status-banner error">{error}</p> : null}
 
       <div className="stats-grid" aria-busy={loading}>
         <article className="stat-card">
