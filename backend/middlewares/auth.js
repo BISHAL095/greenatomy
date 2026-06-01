@@ -13,17 +13,12 @@ function getBearerToken(header) {
 }
 
 function authMiddleware(req, res, next) {
-  if (!env.authToken) {
-    res.status(500).json({ error: "AUTH_TOKEN is not configured" });
-    return;
-  }
-
   // Support both standard bearer auth and API-key style auth for simple clients.
   const bearerToken = getBearerToken(req.headers.authorization);
   const apiKeyToken = typeof req.headers["x-api-key"] === "string" ? req.headers["x-api-key"].trim() : "";
   const token = bearerToken || apiKeyToken;
 
-  if (token && token === env.authToken) {
+  if (env.authToken && token && token === env.authToken) {
     req.auth = { type: "system" };
     next();
     return;
