@@ -47,6 +47,7 @@ Current SDK scope:
 - `createLog()`
 - `getStats()`
 - `getSummary()`
+- `healthCheck()`
 - `greenatomyMiddleware()`
 
 ## API

@@ -6,6 +6,7 @@ It currently consists of:
 - `backend`: Express + Prisma ingestion and analytics API for telemetry capture, auth, aggregation, and PostgreSQL persistence
 - `frontend`: React + Vite dashboard for request logs, route-level insights, cost trends, and carbon analytics
 - `greenatomy-sdk`: Middleware-based SDK for automatic route telemetry capture in external applications
+- `demo`: Small Express app for exercising SDK telemetry capture
 
 ## Monorepo Structure
 
@@ -13,6 +14,7 @@ It currently consists of:
       backend/         # Express API, auth middleware, telemetry ingestion, Prisma schema/migrations
       frontend/        # React + Vite analytics dashboard
       greenatomy-sdk/  # SDK middleware for request interception + telemetry forwarding
+      demo/            # Express demo app using the SDK middleware
 
 ## Current Project State (MVP Beta)
 

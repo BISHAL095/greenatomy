@@ -6,10 +6,11 @@ const GreenatomyClient = require("../greenatomy-sdk");
 const { greenatomyMiddleware } = GreenatomyClient;
 
 function readConfig() {
-  const baseUrl = process.env.GREENATOMY_BASE_URL || "http://localhost:5000";
+  const baseUrl = process.env.GREENATOMY_BASE_URL || "http://localhost:8000";
   const token = process.env.GREENATOMY_TOKEN || "";
   const apiKey = process.env.GREENATOMY_API_KEY || "";
   const port = Number(process.env.DEMO_PORT || 4100);
+  const environment = process.env.GREENATOMY_ENVIRONMENT || "production";
   const provider = process.env.GREENATOMY_PROVIDER || "generic";
   const region = process.env.GREENATOMY_REGION || "global";
 
@@ -24,6 +25,7 @@ function readConfig() {
     token: token || undefined,
     apiKey: apiKey || undefined,
     port,
+    environment,
     provider,
     region,
   };
@@ -43,6 +45,7 @@ async function main() {
       baseUrl: config.baseUrl,
       token: config.token,
       apiKey: config.apiKey,
+      environment: config.environment,
       provider: config.provider,
       region: config.region,
       shouldTrack(req) {
@@ -92,7 +95,9 @@ async function main() {
   app.listen(config.port, () => {
     console.log(`\nGreenatomy demo app listening on http://localhost:${config.port}`);
     console.log(`Collector: ${config.baseUrl}`);
-    console.log(`Energy model: provider=${config.provider}, region=${config.region}`);
+    console.log(
+      `Energy model: environment=${config.environment}, provider=${config.provider}, region=${config.region}`
+    );
     console.log("Tracked demo routes:");
     console.log("  GET /");
     console.log("  GET /users");
