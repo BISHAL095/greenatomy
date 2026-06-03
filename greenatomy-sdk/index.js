@@ -1,6 +1,6 @@
 const request = require("./http");
 const { GreenatomySdkError } = request;
-const { greenatomyMiddleware } = require("./middleware");
+const { greenatomyMiddleware, CostTracker } = require("./middleware");
 
 class GreenatomyClient {
   constructor({
@@ -131,6 +131,23 @@ class GreenatomyClient {
     });
   }
 
+  // Returns external API spend broken down by provider or label.
+  // groupBy: "provider" | "label" (default: "provider")
+  // Example response: [{ provider: "openai", totalCostUsd, requestCount, avgCostPerRequest }]
+  async getExternalBreakdown(params = {}) {
+    if (!this.enabled) return null;
+
+    return request({
+      baseUrl: this.baseUrl,
+      token: this.token,
+      apiKey: this.apiKey,
+      timeout: this.timeout,
+      method: "GET",
+      url: "/logs/external-breakdown",
+      params: this.buildMeta(params),
+    });
+  }
+
   // Quick sanity check so SDK users can confirm collector connectivity fast.
   async healthCheck() {
     if (!this.enabled) return null;
@@ -149,3 +166,4 @@ class GreenatomyClient {
 module.exports = GreenatomyClient;
 module.exports.GreenatomySdkError = GreenatomySdkError;
 module.exports.greenatomyMiddleware = greenatomyMiddleware;
+module.exports.CostTracker = CostTracker;

@@ -15,11 +15,11 @@ model User {
 }
 
 model Project {
-  id        String      @id @default(cuid())
+  id        String       @id @default(cuid())
   userId    String
   name      String
-  createdAt DateTime    @default(now())
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime     @default(now())
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   apiKeys   ApiKey[]
   logs      RequestLog[]
 
@@ -41,29 +41,55 @@ model ApiKey {
 }
 
 model RequestLog {
-  id         String   @id @default(cuid())
-  projectId  String?
-  apiKeyId   String?
-  environment String? @default("production")
-  method     String
-  path       String
-  statusCode Int?
-  durationMs Int
-  cpuUsedMs  Float
-  memoryDeltaMb Float?
-  ioBytes    Float?
-  networkBytes Float?
-  provider   String?
-  region     String?
-  cpuUtil    Float
-  energyKwh  Float
-  cost       Float
-  createdAt  DateTime @default(now())
-  project    Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  apiKey     ApiKey?  @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  id                   String         @id @default(cuid())
+  projectId            String?
+  apiKeyId             String?
+  environment          String?        @default("production")
+  method               String
+  path                 String
+  statusCode           Int?
+  durationMs           Int
+  cpuUsedMs            Float
+  memoryDeltaMb        Float?
+  ioBytes              Float?
+  networkBytes         Float?
+  provider             String?
+  region               String?
+  cpuUtil              Float
+  energyKwh            Float
+  cost                 Float
+  totalExternalCostUsd Float?
+  createdAt            DateTime       @default(now())
+  project              Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  apiKey               ApiKey?        @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  externalCosts        ExternalCost[]
 
   @@index([createdAt])
   @@index([method, path])
   @@index([projectId, environment, createdAt])
   @@index([apiKeyId])
+}
+
+model ExternalCost {
+  id           String     @id @default(cuid())
+  requestLogId String
+  requestLog   RequestLog @relation(fields: [requestLogId], references: [id], onDelete: Cascade)
+
+  provider     String
+  model        String?
+  operation    String
+
+  inputTokens  Int?
+  outputTokens Int?
+  totalTokens  Int?
+
+  costUsd      Float
+  latencyMs    Int?
+  label        String?
+
+  createdAt    DateTime   @default(now())
+
+  @@index([requestLogId])
+  @@index([provider, createdAt])
+  @@index([label])
 }

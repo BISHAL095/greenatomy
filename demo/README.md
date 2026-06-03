@@ -89,3 +89,5 @@ app.use(
 ```
 
 The SDK sends best-effort `cpuUsedMs`, `memoryDeltaMb`, `networkBytes`, and `ioBytes` alongside route metadata. The backend uses those fields with provider PUE and regional tariff factors to calculate `energyKwh`, `cost`, and `cpuUtil`.
+
+The SDK also supports per-request external API cost annotations through `res.locals.greenatomy.trackCost(...)`. The demo routes do not currently emit external cost records.

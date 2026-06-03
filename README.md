@@ -27,6 +27,7 @@ Greenatomy is currently in functional MVP/Beta stage.
 - Latency tracking
 - Status code capture
 - Resource-aware energy model using CPU time, memory delta, network bytes, IO bytes, provider PUE, and regional tariff inputs
+- Energy model separates datacenter compute/IO overhead from network transfer energy
 - Auth-protected telemetry ingestion APIs
 - User registration/login with signed dashboard sessions
 - Project creation and project-scoped API key management
@@ -39,7 +40,7 @@ Greenatomy is currently in functional MVP/Beta stage.
 
 ### In Progress / Not Yet Production Ready:
 - Full enterprise-grade multi-tenant project isolation
-- Request cost attribution for external APIs (OpenAI, Anthropic, Stripe, etc.)
+- External API cost attribution persistence and dashboard reporting
 - Advanced abuse prevention
 - CI/CD automation
 - Observability stack (logging, tracing, alerting)
@@ -111,6 +112,7 @@ This enables:
 - Latency logging
 - Status code tracking
 - Best-effort CPU, memory, network, and IO resource telemetry
+- Optional per-request external API cost annotations through the SDK middleware
 - Provider/region-aware energy and cost estimation
 - Telemetry forwarding to Greenatomy backend
 
@@ -131,6 +133,10 @@ This enables:
 - `GET /logs?limit=10&method=GET&path=/heavy&range=24h`
 - `GET /logs/stats?method=GET&path=/heavy&range=24h`
 - `GET /logs/summary?range=24h`
+
+## Data Model Notes:
+- `RequestLog` stores calculated request energy, cost, CPU utilization, resource metrics, provider, region, project, API key, and environment.
+- `ExternalCost` schema and migration exist for future external API spend attribution. SDK middleware can annotate request-level external costs, but backend persistence/query endpoints for those annotations are still being integrated.
 
 # Auth Model (Current MVP)
 

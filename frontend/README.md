@@ -33,6 +33,7 @@ frontend/
 - Session persistence in localStorage for refresh-safe dashboard state
 - Project selector, environment selector, and project API key management
 - Auth-aware API requests using stored user session tokens
+- Stale-request guards so old failed requests do not leave error banners after newer data loads
 - Loading/error states for all major data surfaces
 
 ## Telemetry Fields Displayed
@@ -43,6 +44,8 @@ The Logs page shows the backend-calculated model output and the resource inputs 
 - `memoryDeltaMb`, `ioBytes`, `networkBytes`
 - `provider`, `region`
 - `energyKwh`, `cost`
+
+External API cost attribution fields are not yet displayed in the dashboard.
 
 ## Prerequisites
 

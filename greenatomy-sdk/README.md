@@ -49,6 +49,7 @@ Current SDK scope:
 - `getSummary()`
 - `healthCheck()`
 - `greenatomyMiddleware()`
+- `CostTracker` / `res.locals.greenatomy.trackCost()` for per-request external API cost annotations
 
 ## API
 
@@ -94,6 +95,8 @@ Common payload fields:
 - `networkBytes` (optional, defaults to `0`)
 - `provider` (optional, used for the energy model PUE factor)
 - `region` (optional, used for the model tariff factor)
+- `externalCosts` (optional, collected by middleware when route handlers call `trackCost`; backend persistence is still being integrated)
+- `totalExternalCostUsd` (optional, sum of `externalCosts`)
 - `createdAt` (optional)
 
 `energyKwh`, `cost`, and `cpuUtil` are calculated by the backend collector and returned in the stored log.
@@ -129,6 +132,7 @@ By default the middleware:
 - never blocks the user request if telemetry submission fails
 - associates logs with the issuing project API key
 - tags logs by environment (`development`, `staging`, `production`)
+- exposes `res.locals.greenatomy.trackCost(...)` so route handlers can annotate external API spend on the current request
 
 Optional middleware options:
 
@@ -139,6 +143,32 @@ Optional middleware options:
 - `environment` to separate development, staging, and production traffic
 
 `cpuUsedMs`, `memoryDeltaMb`, and `networkBytes` are measured best-effort from Node.js process/socket APIs. `ioBytes` defaults to `0` unless an application sends a measured value manually via `createLog()`.
+
+### External API Cost Annotations
+
+Inside an Express route, call `res.locals.greenatomy.trackCost(...)` after an external API call:
+
+```js
+app.post("/chat", async (req, res) => {
+  const started = Date.now();
+  const response = await callProvider();
+
+  res.locals.greenatomy?.trackCost({
+    provider: "openai",
+    model: "gpt-4o-mini",
+    operation: "chat.completions",
+    inputTokens: response.usage?.prompt_tokens,
+    outputTokens: response.usage?.completion_tokens,
+    costUsd: 0.0012,
+    latencyMs: Date.now() - started,
+    label: "support-chat",
+  });
+
+  res.json(response);
+});
+```
+
+The middleware attaches accumulated records to the telemetry payload as `externalCosts` and `totalExternalCostUsd`. Backend schema support exists, but full backend persistence/query endpoints for these annotations are still being integrated.
 
 ### `getStats(params?)`
 
@@ -155,6 +185,19 @@ Fetches a lightweight deployment-ready overview from `GET /logs/summary`.
 ```js
 const summary = await client.getSummary({ range: "24h" });
 ```
+
+### `getExternalBreakdown(params?)`
+
+Fetches external API cost breakdowns from `GET /logs/external-breakdown`.
+
+```js
+const breakdown = await client.getExternalBreakdown({
+  groupBy: "provider",
+  range: "7d",
+});
+```
+
+This SDK method is available for future backend support. The current backend route is not yet implemented.
 
 ## Error Handling
 
@@ -200,6 +243,7 @@ Possible `error.code` values:
 - `token` is ideal for authenticated dashboard/user access.
 - `apiKey` is ideal for project-level telemetry ingestion.
 - The static backend `AUTH_TOKEN` should not be used in browser clients.
+- External API cost annotations are best-effort and never block the host app request.
 
 ## Recommended Onboarding
 

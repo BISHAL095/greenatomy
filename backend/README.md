@@ -30,6 +30,7 @@ backend/
   prisma/
     schema.prisma
     migrations/
+      20260603114443_external_api_costs_addition/
 ```
 
 ## Why this structure is good for current scope
@@ -149,12 +150,32 @@ npm test
 
 The backend calculates `energyKwh`, `cost`, and `cpuUtil`. Missing resource metrics default to `0`; missing provider/region falls back to the generic/global model.
 
+### Energy Model Notes
+
+- CPU and memory energy are estimated from request duration, CPU time, memory delta, and a simple per-core power envelope.
+- IO energy is multiplied by provider PUE because it is treated as datacenter-side work.
+- Network transfer energy is not multiplied by provider PUE because it is treated separately from datacenter overhead.
+- `cpuUtil` remains a request-local single-core ratio (`cpuUsedMs / durationMs`) for backward compatibility.
+- Very small energy values can round to `0.00000000`; this is expected for negligible requests.
+- Supported regional tariff keys include `ap-south-1`, `ap-south-2`, `asia-south1`, `asia-south2`, `central-india`, `south-india`, `india`, and `global`.
+
+### External API Costs
+
+The Prisma schema includes `ExternalCost` and `RequestLog.totalExternalCostUsd` for external API spend attribution, with migration:
+
+```txt
+prisma/migrations/20260603114443_external_api_costs_addition/
+```
+
+The SDK middleware can send external cost annotations, but backend validator/service persistence and analytics endpoints for these annotations are still pending.
+
 ## Automated Test Coverage
 
 - Auth middleware behavior (`401`/authorized flows)
 - Logs controller behavior (validator/service integration with mocks)
 - Logs route wiring
 - Query validator edge cases (range/method/date validation)
+- Energy calculator edge cases including legacy signature compatibility, provider/region fallback, negative memory deltas, and network energy handling
 
 ### Example
 
@@ -193,7 +214,7 @@ curl -X POST "http://localhost:8000/logs" \
 ## Notes
 
 - Energy and cost are heuristic estimates intended for trend analysis
-- The energy model combines CPU, memory, IO, network transfer, provider PUE, and regional tariff factors
+- The energy model combines CPU, memory, IO, network transfer, provider PUE, and regional tariff factors; network energy is intentionally not PUE-multiplied
 - `/logs` read routes require either `Authorization: Bearer <user-session-token>` or the optional static `AUTH_TOKEN`
 - `POST /logs` requires `x-api-key: <project-api-key>` for project-scoped ingestion
 - In production, make sure the frontend origin is included in `CORS_ORIGIN`

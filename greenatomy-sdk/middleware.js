@@ -52,6 +52,70 @@ function getSocketMetric(req, metric) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
+// Accumulates external API cost annotations for a single request.
+// Attached to res.locals.greenatomy by the middleware so route handlers
+// can call tracker.trackCost() without importing anything extra.
+class CostTracker {
+  constructor() {
+    this._costs = [];
+  }
+
+  trackCost({
+    provider,
+    model,
+    operation,
+    inputTokens,
+    outputTokens,
+    totalTokens,
+    costUsd,
+    latencyMs,
+    label,
+  }) {
+    if (typeof costUsd !== "number" || !Number.isFinite(costUsd) || costUsd < 0) {
+      console.warn(
+        "[greenatomy] trackCost: costUsd must be a non-negative finite number, skipping"
+      );
+      return;
+    }
+
+    if (!provider || !operation) {
+      console.warn(
+        "[greenatomy] trackCost: provider and operation are required, skipping"
+      );
+      return;
+    }
+
+    this._costs.push({
+      provider,
+      model:        model        ?? null,
+      operation,
+      inputTokens:  inputTokens  ?? null,
+      outputTokens: outputTokens ?? null,
+      // Derive totalTokens if not supplied but components are available.
+      totalTokens:
+        totalTokens != null
+          ? totalTokens
+          : inputTokens != null && outputTokens != null
+          ? inputTokens + outputTokens
+          : null,
+      costUsd,
+      latencyMs: latencyMs ?? null,
+      label:     label     ?? null,
+    });
+  }
+
+  // Empties and returns the accumulated cost records.
+  // Called once by submitTelemetry — draining prevents double-submission
+  // if finish and close both fire (aborted keep-alive connections).
+  _drain() {
+    return this._costs.splice(0);
+  }
+
+  get totalCostUsd() {
+    return this._costs.reduce((sum, c) => sum + c.costUsd, 0);
+  }
+}
+
 function greenatomyMiddleware({
   shouldTrack = defaultShouldTrack,
   onError,
@@ -85,6 +149,12 @@ function greenatomyMiddleware({
       return;
     }
 
+    // Attach a per-request tracker so route handlers can annotate external costs:
+    //   res.locals.greenatomy.trackCost({ provider, operation, costUsd, ... })
+    const tracker = new CostTracker();
+    res.locals = res.locals || {};
+    res.locals.greenatomy = tracker;
+
     const startedAt = new Date();
     const startNs = process.hrtime.bigint();
     const startCpu = process.cpuUsage();
@@ -112,6 +182,15 @@ function greenatomyMiddleware({
           startBytesWritten
       );
 
+      // Drain before the async request — finish and close can both fire on
+      // aborted keep-alive connections, and submitted guards the outer call,
+      // but draining here is an extra safety net against double-sending costs.
+      const externalCosts = tracker._drain();
+      const totalExternalCostUsd = externalCosts.reduce(
+        (sum, c) => sum + c.costUsd,
+        0
+      );
+
       request({
         baseUrl: normalizedBaseUrl,
         token,
@@ -132,6 +211,12 @@ function greenatomyMiddleware({
           region,
           createdAt: startedAt.toISOString(),
           environment: normalizedEnvironment,
+          // External API cost attribution — omit the field entirely when empty
+          // so existing backend validators that don't know about it are unaffected.
+          ...(externalCosts.length > 0 && {
+            externalCosts,
+            totalExternalCostUsd,
+          }),
         },
       }).catch((error) => {
         // Telemetry should never break host app execution.
@@ -151,4 +236,5 @@ function greenatomyMiddleware({
 
 module.exports = {
   greenatomyMiddleware,
+  CostTracker,
 };
