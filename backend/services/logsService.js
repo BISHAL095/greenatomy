@@ -91,7 +91,6 @@ async function createLog(payload) {
     data: {
       projectId: payload.projectId,
       apiKeyId: payload.apiKeyId,
-      // Defaults to production unless SDK or client explicitly tags otherwise.
       environment: payload.environment || "production",
       method: payload.method,
       path: payload.path,
@@ -106,7 +105,23 @@ async function createLog(payload) {
       cpuUtil,
       energyKwh: energy,
       cost,
+      totalExternalCostUsd: payload.totalExternalCostUsd ?? null,
       ...(payload.createdAt ? { createdAt: payload.createdAt } : {}),
+      ...(payload.externalCosts?.length > 0 && {
+        externalCosts: {
+          create: payload.externalCosts.map((c) => ({
+            provider:     c.provider,
+            model:        c.model        ?? null,
+            operation:    c.operation,
+            inputTokens:  c.inputTokens  ?? null,
+            outputTokens: c.outputTokens ?? null,
+            totalTokens:  c.totalTokens  ?? null,
+            costUsd:      c.costUsd,
+            latencyMs:    c.latencyMs    ?? null,
+            label:        c.label        ?? null,
+          })),
+        },
+      }),
     },
   });
 }
@@ -304,10 +319,56 @@ async function fetchSummary(filters) {
   };
 }
 
+async function fetchExternalBreakdown(filters) {
+  const where = buildWhereClause(filters);
+
+  const costs = await prisma.externalCost.findMany({
+    where: {
+      requestLog: where,
+    },
+    select: {
+      provider: true,
+      model: true,
+      operation: true,
+      label: true,
+      costUsd: true,
+    },
+  });
+
+  // Group in application code — avoids raw SQL and stays consistent
+  // with how fetchSummary handles per-route aggregation.
+  const groupKey = filters.groupBy === "label" ? "label" : "provider";
+  const groupMap = new Map();
+
+  for (const cost of costs) {
+    const key = cost[groupKey] ?? "unknown";
+    const current = groupMap.get(key) || {
+      [groupKey]: key,
+      totalCostUsd: 0,
+      requestCount: 0,
+    };
+
+    current.totalCostUsd += cost.costUsd;
+    current.requestCount += 1;
+    groupMap.set(key, current);
+  }
+
+  return Array.from(groupMap.values())
+    .map((entry) => ({
+      ...entry,
+      totalCostUsd: Number(entry.totalCostUsd.toFixed(6)),
+      avgCostPerRequest: Number(
+        (entry.totalCostUsd / entry.requestCount).toFixed(6)
+      ),
+    }))
+    .sort((a, b) => b.totalCostUsd - a.totalCostUsd);
+}
+
 module.exports = {
   createLog,
   fetchLogs,
   fetchStats,
   fetchSummary,
+  fetchExternalBreakdown,
   resolveProjectScope,
 };

@@ -2,6 +2,7 @@ const {
   validateCreateLogBody,
   validateLogsQuery,
   validateStatsQuery,
+  validateExternalBreakdownQuery,
 } = require("../validators/logsValidator");
 const logsService = require("../services/logsService");
 
@@ -125,9 +126,30 @@ async function getSummary(req, res) {
   }
 }
 
+async function getExternalBreakdown(req, res) {
+  try {
+    const filters = await buildScopedFilters(req, validateExternalBreakdownQuery);
+
+    const breakdown = await logsService.fetchExternalBreakdown(filters);
+
+    res.json(breakdown);
+  } catch (err) {
+    const statusCode = getStatusCode(err);
+    const message =
+      statusCode === 500 ? "Failed to fetch external breakdown" : err.message;
+
+    console.error("External breakdown fetch failed:", err.message);
+
+    res.status(statusCode).json({
+      error: message,
+    });
+  }
+}
+
 module.exports = {
   createLog,
   getLogs,
   getStats,
   getSummary,
+  getExternalBreakdown,
 };

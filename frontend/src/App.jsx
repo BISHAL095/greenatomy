@@ -14,10 +14,13 @@ import {
 } from "./lib/api";
 import "./App.css";
 
-// Defer the chart bundle until the charts view is actually opened.
+// Defer the charts and external costs bundle until the charts view is actually opened.
 const ChartsPanel = lazy(() => import("./components/ChartsPanel"));
 
-const VALID_PAGES = new Set(["overview", "logs", "charts", "keys"]);
+const ExternalCostsPanel = lazy(() => import("./components/ExternalCostsPanel"));
+
+
+const VALID_PAGES = new Set(["overview", "logs", "charts", "keys", "costs"]);
 const VALID_RANGES = new Set(["24h", "7d", "30d", "all", "custom"]);
 const VALID_SORTS = new Set(["asc", "desc"]);
 const VALID_CHART_RANGES = new Set(["24h", "7d", "30d"]);
@@ -25,6 +28,7 @@ const NAV_ITEMS = [
   { id: "overview", label: "Overview", icon: "overview" },
   { id: "logs", label: "Logs", icon: "logs" },
   { id: "charts", label: "Charts", icon: "charts" },
+  { id: "costs", label: "Ext. Costs", icon: "costs" },
   { id: "keys", label: "Keys", icon: "keys" },
 ];
 
@@ -77,6 +81,15 @@ function NavIcon({ kind }) {
           <path d="M12 12h8" />
           <path d="M17 12v3" />
           <path d="M20 12v2" />
+        </svg>
+      );
+    case "costs":
+      return (
+        <svg {...common}>
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
+          <path d="M12 6v6l4 2" />
+          <path d="M9 13h6" />
+          <path d="M9 17h4" />
         </svg>
       );
     default:
@@ -264,6 +277,9 @@ function App() {
   const [newProjectName, setNewProjectName] = useState("");
   const [projectFormLoading, setProjectFormLoading] = useState(false);
   const [projectFormError, setProjectFormError] = useState("");
+  const [sessionReady, setSessionReady] = useState(
+  Boolean(storedSession?.selectedProjectId)
+);
   const { currentPage, filters, chartRange } = dashboardState;
   const deferredFilters = useDeferredValue(filters);
 
@@ -290,10 +306,12 @@ function App() {
             selectedProjectId: nextSelectedProjectId,
           });
           setSessionError("");
+          setSessionReady(true);  // ADD THIS
         }
       })
       .catch((err) => {
         if (!cancelled) {
+          setSessionReady(true);  // ADD THIS
           if (!sessionUser && sessionProjects.length === 0) {
             setSessionError(
               err?.response?.data?.error || "Unable to restore session. Please retry or log out."
@@ -305,6 +323,7 @@ function App() {
     return () => {
       cancelled = true;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionToken]);
 
   useEffect(() => {
@@ -706,7 +725,7 @@ function App() {
           </header>
 
           <main className="dashboard">
-        {currentPage === "overview" ? (
+        {currentPage === "overview" && sessionReady ? (
           <>
             <section className="hero-panel">
               <div className="hero-copy">
@@ -728,7 +747,7 @@ function App() {
           </>
         ) : null}
 
-      {currentPage === "logs" ? (
+      {currentPage === "logs" && sessionReady ? (
           <section className="logs-toolbar-panel">
             <div className="logs-toolbar-head">
               <p className="eyebrow">Logs explorer</p>
@@ -821,7 +840,7 @@ function App() {
           </section>
         ) : null}
 
-        {currentPage === "logs" ? (
+        {currentPage === "logs" && sessionReady ? (
           <LogsTable
             filters={{
               ...deferredFilters,
@@ -830,13 +849,24 @@ function App() {
             }}
           />
         ) : null}
-        {currentPage === "charts" ? (
+        {currentPage === "charts"  && sessionReady ? (
           <Suspense fallback={<section className="stats-panel"><p className="empty-state">Loading charts...</p></section>}>
             <ChartsPanel
               projectId={selectedProjectId}
               environment={selectedEnvironment}
               range={chartRange}
               onRangeChange={handleChartRangeChange}
+            />
+          </Suspense>
+        ) : null}
+        {currentPage === "costs"  && sessionReady ? (
+          <Suspense fallback={<section className="stats-panel"><p className="empty-state">Loading...</p></section>}>
+            <ExternalCostsPanel
+              projectId={selectedProjectId}
+              environment={selectedEnvironment}
+              range={filters.range}
+              from={filters.from}
+              to={filters.to}
             />
           </Suspense>
         ) : null}

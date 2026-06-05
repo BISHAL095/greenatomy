@@ -1,125 +1,58 @@
+// seed.js — generates realistic telemetry data for dashboard demos
+// Usage: node seed.js
+// Optional env: DEMO_PORT, SEED_COUNT, SEED_CONCURRENCY
+
 require("dotenv").config();
 
-const express = require("express");
-const GreenatomyClient = require("../greenatomy-sdk");
+const axios = require("axios");
 
-const { greenatomyMiddleware } = GreenatomyClient;
+const PORT = process.env.DEMO_PORT || 4100;
+const BASE = `http://localhost:${PORT}`;
+const COUNT = Number(process.env.SEED_COUNT || 200);
+const CONCURRENCY = Number(process.env.SEED_CONCURRENCY || 10);
 
-function readConfig() {
-  const baseUrl = process.env.GREENATOMY_BASE_URL || "http://localhost:8000";
-  const token = process.env.GREENATOMY_TOKEN || "";
-  const apiKey = process.env.GREENATOMY_API_KEY || "";
-  const port = Number(process.env.DEMO_PORT || 4100);
-  const environment = process.env.GREENATOMY_ENVIRONMENT || "production";
-  const provider = process.env.GREENATOMY_PROVIDER || "generic";
-  const region = process.env.GREENATOMY_REGION || "global";
+// Weight controls how often each route appears in the seeded traffic.
+// Higher weight = more requests = more prominent in dashboard charts.
+const ROUTES = [
+  { method: "post", url: "/api/chat",      weight: 5 },
+  { method: "post", url: "/api/checkout",  weight: 2 },
+  { method: "post", url: "/api/post",      weight: 4 },
+  { method: "post", url: "/api/summarize", weight: 3 },
+  { method: "get",  url: "/users",         weight: 6 },
+  { method: "get",  url: "/heavy",         weight: 2 },
+  { method: "get",  url: "/error",         weight: 1 },
+];
 
-  if (!token && !apiKey) {
-    throw new Error(
-      "Set GREENATOMY_TOKEN or GREENATOMY_API_KEY before running the demo."
-    );
+function pickRoute() {
+  const total = ROUTES.reduce((s, r) => s + r.weight, 0);
+  let rand = Math.random() * total;
+  return ROUTES.find((r) => (rand -= r.weight) <= 0) || ROUTES[0];
+}
+
+async function runOne() {
+  const route = pickRoute();
+  try {
+    await axios[route.method](`${BASE}${route.url}`, {});
+  } catch (_) {
+    // 503 from /error is expected — swallow it so seeding continues.
+  }
+}
+
+async function seed() {
+  console.log(`\nSeeding ${COUNT} requests against ${BASE}`);
+  console.log(`Concurrency: ${CONCURRENCY}\n`);
+
+  for (let i = 0; i < COUNT; i += CONCURRENCY) {
+    const batch = Math.min(CONCURRENCY, COUNT - i);
+    await Promise.all(Array.from({ length: batch }, runOne));
+    const done = Math.min(i + CONCURRENCY, COUNT);
+    process.stdout.write(`\r  ${done}/${COUNT} requests sent`);
   }
 
-  return {
-    baseUrl,
-    token: token || undefined,
-    apiKey: apiKey || undefined,
-    port,
-    environment,
-    provider,
-    region,
-  };
+  console.log("\n\nDone. Open the dashboard to see your data.\n");
 }
 
-function wait(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function main() {
-  const config = readConfig();
-  const app = express();
-
-  app.use(express.json());
-  app.use(
-    greenatomyMiddleware({
-      baseUrl: config.baseUrl,
-      token: config.token,
-      apiKey: config.apiKey,
-      environment: config.environment,
-      provider: config.provider,
-      region: config.region,
-      shouldTrack(req) {
-        return req.method !== "OPTIONS" && req.path !== "/health";
-      },
-      onError(error) {
-        console.error("[greenatomy-demo] telemetry failed:", error.message);
-      },
-    })
-  );
-
-  app.get("/", (req, res) => {
-    res.json({
-      ok: true,
-      message: "Greenatomy demo is running.",
-      routes: ["/", "/users", "/heavy", "/error", "/health"],
-    });
-  });
-
-  app.get("/users", (req, res) => {
-    res.json({
-      users: [
-        { id: 1, name: "Ada" },
-        { id: 2, name: "Linus" },
-      ],
-    });
-  });
-
-  app.get("/heavy", async (req, res) => {
-    await wait(180);
-    res.json({
-      ok: true,
-      durationHintMs: 180,
-    });
-  });
-
-  app.get("/error", (req, res) => {
-    res.status(503).json({
-      error: "Synthetic upstream failure",
-    });
-  });
-
-  app.get("/health", (req, res) => {
-    res.json({ status: "ok" });
-  });
-
-  app.listen(config.port, () => {
-    console.log(`\nGreenatomy demo app listening on http://localhost:${config.port}`);
-    console.log(`Collector: ${config.baseUrl}`);
-    console.log(
-      `Energy model: environment=${config.environment}, provider=${config.provider}, region=${config.region}`
-    );
-    console.log("Tracked demo routes:");
-    console.log("  GET /");
-    console.log("  GET /users");
-    console.log("  GET /heavy");
-    console.log("  GET /error");
-    console.log("\nFire a few requests, then open the dashboard to see telemetry.\n");
-  });
-}
-
-main().catch((error) => {
-  console.error("\nDemo failed\n");
-
-  if (error && typeof error === "object") {
-    console.error({
-      name: error.name,
-      message: error.message,
-      code: error.code,
-      statusCode: error.statusCode,
-    });
-  } else {
-    console.error(error);
-  }
-
+seed().catch((err) => {
+  console.error("\nSeed failed:", err.message);
   process.exit(1);
 });

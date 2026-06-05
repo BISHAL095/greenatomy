@@ -122,6 +122,7 @@ npm test
 - `GET /logs` -> latest request logs (protected, supports time windows)
 - `GET /logs/stats` -> aggregated telemetry (protected, supports time windows)
 - `GET /logs/summary` -> deployment overview and route recommendations (protected)
+- `GET /logs/external-breakdown` -> external API spend grouped by provider or label (protected)
 
 ### Auth Model
 
@@ -161,13 +162,67 @@ The backend calculates `energyKwh`, `cost`, and `cpuUtil`. Missing resource metr
 
 ### External API Costs
 
-The Prisma schema includes `ExternalCost` and `RequestLog.totalExternalCostUsd` for external API spend attribution, with migration:
+The `ExternalCost` table and `RequestLog.totalExternalCostUsd` column were added via migration:
 
 ```txt
 prisma/migrations/20260603114443_external_api_costs_addition/
 ```
 
-The SDK middleware can send external cost annotations, but backend validator/service persistence and analytics endpoints for these annotations are still pending.
+SDK middleware attaches a `CostTracker` to `res.locals.greenatomy` per request. Route handlers call `tracker.trackCost({ provider, operation, costUsd, ... })` for each external API call. On response finish, costs are drained and sent as `externalCosts[]` in the `POST /logs` payload alongside `totalExternalCostUsd`.
+
+The backend persists external costs as nested `ExternalCost` children of `RequestLog` in a single atomic Prisma transaction.
+
+#### External Breakdown Endpoint
+
+```txt
+GET /logs/external-breakdown?groupBy=provider&range=24h&environment=production
+```
+
+Query params:
+- `groupBy`: `provider` (default) or `label`
+- `range`, `from`, `to`, `environment`, `projectId`: same semantics as `/logs/stats`
+
+Response:
+```json
+[
+  {
+    "provider": "openai",
+    "totalCostUsd": 4.203819,
+    "requestCount": 312,
+    "avgCostPerRequest": 0.013474
+  }
+]
+```
+
+Results are sorted by `totalCostUsd` descending. Empty array when no external costs exist in the window.
+
+#### Create Log Payload with External Costs
+
+```json
+{
+  "method": "POST",
+  "path": "/api/chat",
+  "statusCode": 200,
+  "durationMs": 1820,
+  "cpuUsedMs": 42.1,
+  "totalExternalCostUsd": 0.004312,
+  "externalCosts": [
+    {
+      "provider": "openai",
+      "model": "gpt-4o",
+      "operation": "chat.completions",
+      "inputTokens": 512,
+      "outputTokens": 148,
+      "totalTokens": 660,
+      "costUsd": 0.004312,
+      "latencyMs": 1640,
+      "label": "generate-answer"
+    }
+  ]
+}
+```
+
+`externalCosts` is optional. When absent or empty, the fields are omitted and the log is created as before with no child records.
 
 ## Automated Test Coverage
 
@@ -218,3 +273,10 @@ curl -X POST "http://localhost:8000/logs" \
 - `/logs` read routes require either `Authorization: Bearer <user-session-token>` or the optional static `AUTH_TOKEN`
 - `POST /logs` requires `x-api-key: <project-api-key>` for project-scoped ingestion
 - In production, make sure the frontend origin is included in `CORS_ORIGIN`
+
+## Where to improve for scalability
+
+- Add integration tests that run against a real Postgres instance in CI
+- Add OpenTelemetry tracing for distributed request visibility
+- Move to a service-per-domain structure (auth service, telemetry service) as the API grows
+- Add a job queue for async telemetry processing under high ingestion load

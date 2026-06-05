@@ -306,8 +306,23 @@ function validateCreateLogBody(body) {
   };
 }
 
+function validateExternalBreakdownQuery(query) {
+  const timeWindow = normalizeTimeWindow(query);
+
+  return {
+    groupBy: ["provider", "label"].includes(query.groupBy)
+      ? query.groupBy
+      : "provider",
+    projectId: normalizeProjectId(query.projectId),
+    environment: normalizeEnvironment(query.environment),
+    createdAt: timeWindow.createdAt,
+    range: timeWindow.range,
+  };
+}
+
 module.exports = {
   validateCreateLogBody,
   validateLogsQuery,
   validateStatsQuery,
+  validateExternalBreakdownQuery
 };
