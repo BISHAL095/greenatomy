@@ -31,7 +31,6 @@ app.use(
     windowMs: env.logsRateLimitWindowMs,
     maxRequests: env.logsRateLimitMaxRequests,
   }),
-  authMiddleware,
   logsRoute
 );
 

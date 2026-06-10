@@ -37,6 +37,12 @@ export GREENATOMY_TOKEN="your-user-token"
 npm --prefix demo start
 ```
 
+To replay traffic against the demo app after launch:
+
+```bash
+npm --prefix demo run seed
+```
+
 Optional environment variables:
 
 - `DEMO_PORT` default: `4100`
@@ -53,9 +59,14 @@ curl http://localhost:4100/
 curl http://localhost:4100/users
 curl http://localhost:4100/heavy
 curl http://localhost:4100/error
+curl -X POST http://localhost:4100/api/chat
+curl -X POST http://localhost:4100/api/summarize
+curl -X POST http://localhost:4100/api/external
 ```
 
 These routes are tracked automatically by the SDK middleware and sent to your hosted collector.
+
+`POST /api/chat`, `POST /api/summarize`, and `POST /api/external` also simulate external API cost attribution by calling `res.locals.greenatomy.trackCost(...)` inside the route handler.
 
 `GET /health` exists but is intentionally not tracked in the demo middleware config.
 

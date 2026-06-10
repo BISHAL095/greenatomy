@@ -26,5 +26,5 @@ COPY validators ./validators
 COPY index.js ./
 
 USER node
-EXPOSE 3000
+EXPOSE 8000
 CMD ["node", "index.js"]
