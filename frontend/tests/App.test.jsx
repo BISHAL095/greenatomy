@@ -105,6 +105,8 @@ beforeEach(() => {
 describe("Dashboard UI", () => {
   test("shows custom date inputs when custom range is selected", async () => {
     render(<App />);
+    await screen.findByText("test@example.com");
+
     fireEvent.click(screen.getByRole("button", { name: "Logs" }));
 
     const rangeSelect = screen.getByLabelText("Time range");
@@ -116,6 +118,8 @@ describe("Dashboard UI", () => {
 
   test("applies date sort and supports pagination navigation", async () => {
     render(<App />);
+    await screen.findByText("test@example.com");
+
     fireEvent.click(screen.getByRole("button", { name: "Logs" }));
 
     expect(await screen.findByText("Showing 10 of 12 logs")).toBeInTheDocument();
@@ -136,6 +140,7 @@ describe("Dashboard UI", () => {
 
   test("syncs page, filters, and chart window to the URL", async () => {
     render(<App />);
+    await screen.findByText("test@example.com");
 
     fireEvent.click(screen.getByRole("button", { name: "Logs" }));
     fireEvent.change(screen.getByLabelText("HTTP method"), {
@@ -176,6 +181,7 @@ describe("Dashboard UI", () => {
     );
 
     render(<App />);
+    await screen.findByText("test@example.com");
 
     expect(screen.getByRole("button", { name: "Logs" })).toHaveClass("active");
     expect(screen.getByLabelText("HTTP method")).toHaveValue("POST");
@@ -191,6 +197,7 @@ describe("Dashboard UI", () => {
 
   test("shows API keys on the dedicated keys page", async () => {
     render(<App />);
+    await screen.findByText("test@example.com");
 
     fireEvent.click(screen.getByRole("button", { name: "Keys" }));
 

@@ -1,0 +1,87 @@
+1
+00:00:00,000 --> 00:00:05,200
+Ever look at your OpenAI billing dashboard and wonder where those dollars actually went?
+
+2
+00:00:05,200 --> 00:00:10,200
+If you are managing external APIs, tracking unpredictable costs in real time is incredibly difficult.
+
+3
+00:00:10,200 --> 00:00:13,800
+That is why we built Greenatomy.
+
+4
+00:00:13,800 --> 00:00:19,200
+Right here in the backend logs, the platform intercepts requests to calculate a complete operational breakdown
+
+5
+00:00:19,200 --> 00:00:24,500
+for third-party calls, from Anthropic and OpenAI to Google and Azure.
+
+6
+00:00:24,500 --> 00:00:27,200
+But raw JSON is just the foundation.
+
+7
+00:00:27,200 --> 00:00:29,800
+Let us look at the live React dashboard.
+
+8
+00:00:29,800 --> 00:00:34,800
+At the top, clean Live Spend Cards give you an instant snapshot,
+
+9
+00:00:34,800 --> 00:00:37,800
+while the ranked usage table below offers deep granularity.
+
+10
+00:00:37,800 --> 00:00:40,800
+Watch how seamlessly we can toggle grouping,
+
+11
+00:00:40,800 --> 00:00:45,200
+moving from the overall Provider view straight down to specific feature Labels.
+
+12
+00:00:45,200 --> 00:00:51,000
+Now you can pinpoint exactly what your Financial Analysis or Chatbot features cost in real time.
+
+13
+00:00:51,000 --> 00:00:53,800
+Let us watch the telemetry engine handle a live load.
+
+14
+00:00:53,800 --> 00:00:58,200
+I am running a traffic seed script to simulate real-world user spikes.
+
+15
+00:00:58,200 --> 00:01:02,200
+As data streams in, the dashboard updates instantly.
+
+16
+00:01:02,200 --> 00:01:04,800
+Over on the Charts view, you can see the platform
+
+17
+00:01:04,800 --> 00:01:09,800
+plotting the real-time cost and energy footprint seamlessly.
+
+18
+00:01:09,800 --> 00:01:13,200
+By the time you review the main overview, Greenatomy has automatically
+
+19
+00:01:13,200 --> 00:01:16,800
+highlighted efficiency drifts, flagged your most expensive API routes,
+
+20
+00:01:16,800 --> 00:01:20,200
+and mapped out your exact cost concentration.
+
+21
+00:01:20,200 --> 00:01:23,800
+No more surprise bills, just clear visibility.
+
+22
+00:01:23,800 --> 00:01:30,000
+Check out the repository link below to try it out, and let me know your thoughts in the comments.

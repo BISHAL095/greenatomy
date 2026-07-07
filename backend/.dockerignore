@@ -1,7 +1,39 @@
+# Dependencies
 node_modules
 npm-debug.log
+yarn-error.log
+
+# Environment & secrets
 .env
-coverage
+.env.*
+*.pem
+*.key
+
+# Git
+.git
+.gitignore
+
+# Development & testing
 tests
-*.tgz
+coverage
+.nyc_output
+
+# IDE & OS
+.vscode
+.idea
 .DS_Store
+Thumbs.db
+
+# Documentation
+*.md
+README.md
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Misc
+tmp
+temp
+logs

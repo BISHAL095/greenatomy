@@ -289,6 +289,15 @@ function validateCreateLogBody(body) {
     throw err;
   }
 
+  const totalExternalCostUsd = normalizeOptionalNumber(
+    body.totalExternalCostUsd,
+    "totalExternalCostUsd"
+  );
+
+  const externalCosts = Array.isArray(body.externalCosts)
+    ? body.externalCosts
+    : [];
+
   return {
     projectId: normalizeProjectId(body.projectId),
     environment,
@@ -303,6 +312,9 @@ function validateCreateLogBody(body) {
     provider: normalizeOptionalText(body.provider),
     region: normalizeOptionalText(body.region),
     createdAt,
+
+    totalExternalCostUsd,
+    externalCosts,
   };
 }
 

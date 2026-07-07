@@ -93,6 +93,7 @@ function Stats({ filters }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [briefCopyStatus, setBriefCopyStatus] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -315,6 +316,34 @@ function Stats({ filters }) {
     },
   ];
 
+  const shareableBriefText = [
+    "Greenatomy deployment brief",
+    summary.headline || "No summary available yet.",
+    `Requests: ${stats.totalRequests ?? 0}`,
+    `Avg latency: ${Number(stats.avgDurationMs ?? 0).toFixed(2)} ms`,
+    `Energy tracked: ${Number(stats.totalEnergyKwh ?? 0).toFixed(6)} kWh`,
+    `Estimated cost: INR ${Number(stats.totalCost ?? 0).toFixed(6)}`,
+    ...(summary.highlights || []).map((item) => `${item.label}: ${item.value}`),
+    ...(summary.recommendations?.length
+      ? [`Next: ${summary.recommendations.join(" ")}`]
+      : []),
+  ].join("\n");
+
+  async function handleCopyBrief() {
+    if (!navigator.clipboard?.writeText) {
+      setBriefCopyStatus("Copy failed");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareableBriefText);
+      setBriefCopyStatus("Copied");
+      window.setTimeout(() => setBriefCopyStatus(""), 1800);
+    } catch {
+      setBriefCopyStatus("Copy failed");
+    }
+  }
+
   return (
     <section className="stats-panel">
       <div className="section-heading">
@@ -352,7 +381,17 @@ function Stats({ filters }) {
 
       <section className={`deployment-brief tone-${loading ? "stable" : summary.status}`}>
         <div className="deployment-brief-copy">
-          <p className="eyebrow">Shareable brief</p>
+          <div className="brief-title-row">
+            <p className="eyebrow">Shareable brief</p>
+            <button
+              type="button"
+              className="copy-btn subtle"
+              onClick={handleCopyBrief}
+              disabled={loading}
+            >
+              {briefCopyStatus || "Copy brief"}
+            </button>
+          </div>
           <h3>{loading ? "Preparing deployment brief..." : summary.headline || "No summary available yet."}</h3>
           <p className="section-copy">
             {loading

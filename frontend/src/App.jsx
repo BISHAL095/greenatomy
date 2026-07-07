@@ -273,6 +273,7 @@ function App() {
   const [apiKeysLoading, setApiKeysLoading] = useState(false);
   const [apiKeysError, setApiKeysError] = useState("");
   const [freshApiKey, setFreshApiKey] = useState("");
+  const [apiKeyCopyStatus, setApiKeyCopyStatus] = useState("");
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [projectFormLoading, setProjectFormLoading] = useState(false);
@@ -476,6 +477,7 @@ function App() {
     setSelectedEnvironment("production");
     setApiKeysLoading(Boolean(payload.project?.id));
     setFreshApiKey("");
+    setApiKeyCopyStatus("");
     setShowProjectForm(false);
     setNewProjectName("");
     setProjectFormError("");
@@ -494,6 +496,7 @@ function App() {
     setApiKeysError("");
     setApiKeysLoading(false);
     setFreshApiKey("");
+    setApiKeyCopyStatus("");
     setShowProjectForm(false);
     setNewProjectName("");
     setProjectFormError("");
@@ -534,6 +537,7 @@ function App() {
       setApiKeysError("");
       setApiKeysLoading(true);
       setFreshApiKey("");
+      setApiKeyCopyStatus("");
       setShowProjectForm(false);
       setNewProjectName("");
       setProjectFormError("");
@@ -559,8 +563,24 @@ function App() {
 
       setApiKeys((current) => [res.data.apiKey, ...current]);
       setFreshApiKey(res.data.rawKey || "");
+      setApiKeyCopyStatus("");
     } catch (err) {
       window.alert(err?.response?.data?.error || "Unable to create API key.");
+    }
+  }
+
+  async function handleCopyFreshApiKey() {
+    if (!freshApiKey || !navigator.clipboard?.writeText) {
+      setApiKeyCopyStatus("Copy failed");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(freshApiKey);
+      setApiKeyCopyStatus("Copied");
+      window.setTimeout(() => setApiKeyCopyStatus(""), 1800);
+    } catch {
+      setApiKeyCopyStatus("Copy failed");
     }
   }
 
@@ -639,6 +659,7 @@ function App() {
                         setApiKeysError("");
                         setApiKeysLoading(Boolean(e.target.value));
                         setFreshApiKey("");
+                        setApiKeyCopyStatus("");
                       }}
                     >
                       {sessionProjects.length > 0 ? (
@@ -883,8 +904,13 @@ function App() {
             </div>
 
             {freshApiKey ? (
-              <div className="status-banner success">
-                Save this key for {selectedEnvironment}: <code>{freshApiKey}</code>
+              <div className="status-banner success copy-banner">
+                <span>
+                  Save this key for {selectedEnvironment}: <code>{freshApiKey}</code>
+                </span>
+                <button type="button" className="copy-btn" onClick={handleCopyFreshApiKey}>
+                  {apiKeyCopyStatus || "Copy key"}
+                </button>
               </div>
             ) : null}
             {apiKeysError ? <p className="status-banner error">{apiKeysError}</p> : null}
