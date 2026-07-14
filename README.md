@@ -40,7 +40,7 @@ Greenatomy is currently in functional MVP/Beta stage.
 
 ### In Progress / Not Yet Production Ready:
 - Full enterprise-grade multi-tenant project isolation
-- External API cost attribution persistence and dashboard reporting
+- Advanced external API cost attribution insights and saved reporting
 - Advanced abuse prevention
 - CI/CD automation
 - Observability stack (logging, tracing, alerting)
@@ -133,10 +133,11 @@ This enables:
 - `GET /logs?limit=10&method=GET&path=/heavy&range=24h`
 - `GET /logs/stats?method=GET&path=/heavy&range=24h`
 - `GET /logs/summary?range=24h`
+- `GET /logs/external-breakdown?groupBy=provider&range=24h`
 
 ## Data Model Notes:
 - `RequestLog` stores calculated request energy, cost, CPU utilization, resource metrics, provider, region, project, API key, and environment.
-- `ExternalCost` schema and migration exist for future external API spend attribution. SDK middleware can annotate request-level external costs, but backend persistence/query endpoints for those annotations are still being integrated.
+- `ExternalCost` schema and migration are present, and the backend persists external API cost records from SDK annotations. The SDK can annotate request-level external costs via `res.locals.greenatomy.trackCost(...)`, and the reportable external breakdown endpoint is implemented.
 
 # Auth Model (Current MVP)
 

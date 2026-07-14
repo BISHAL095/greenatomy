@@ -95,7 +95,7 @@ Common payload fields:
 - `networkBytes` (optional, defaults to `0`)
 - `provider` (optional, used for the energy model PUE factor)
 - `region` (optional, used for the model tariff factor)
-- `externalCosts` (optional, collected by middleware when route handlers call `trackCost`; backend persistence is still being integrated)
+- `externalCosts` (optional, collected by middleware when route handlers call `trackCost`; the backend persists these costs to `ExternalCost` records)
 - `totalExternalCostUsd` (optional, sum of `externalCosts`)
 - `createdAt` (optional)
 
@@ -168,7 +168,7 @@ app.post("/chat", async (req, res) => {
 });
 ```
 
-The middleware attaches accumulated records to the telemetry payload as `externalCosts` and `totalExternalCostUsd`. Backend schema support exists, but full backend persistence/query endpoints for these annotations are still being integrated.
+The middleware attaches accumulated records to the telemetry payload as `externalCosts` and `totalExternalCostUsd`. The backend persists these records and exposes the `/logs/external-breakdown` query endpoint.
 
 ### `getStats(params?)`
 
@@ -197,7 +197,7 @@ const breakdown = await client.getExternalBreakdown({
 });
 ```
 
-This SDK method is available for future backend support. The current backend route is not yet implemented.
+This endpoint is implemented in the backend and available for use.
 
 ## Error Handling
 
